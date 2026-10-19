@@ -37,6 +37,12 @@
 
   const chapters = [
     {title: 'Quelle question ?', minutes: 10, steps: [
+      {title: 'Écrire ou apprendre ?', prompt: 'Regardez : des règles écrites à la main, puis une règle apprise. Lancez la lecture ou avancez étape par étape.',
+        render(ctx) {
+          const c = window.MLF110Classroom.mount('rules', ctx.visual, {});
+          ctx.visual.addEventListener('classroom:step', ev => { if (ev.detail.last) { ctx.say('good', 'Programmer : on écrit la règle. Apprendre : le modèle la tire des exemples — puis on la vérifie sur des animaux jamais vus.'); ctx.unlock(); } });
+          ctx.onCleanup(() => c && c.cleanup());
+        }, hint: 'Allez jusqu’à la dernière étape'},
       {title: 'Trier les problèmes', prompt: 'Pour chaque situation : que cherche-t-on ? Touchez le bon type.',
         render(ctx) {
           const items = [

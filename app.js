@@ -8,7 +8,8 @@
   const dateText=n=>SCH?SCH.label(cmDate(n)):'';
   const tdCm=t=>Math.max(...(t.after||[t.number]));
   const soon=x=>!!x.comingSoon;
-  const dateBadge=(n,isSoon)=>SCH?'<span class="date-badge'+(isSoon?' is-soon':'')+'">'+(isSoon?'À venir · ':'')+esc(dateText(n))+'</span>':'';
+  const shortDate=n=>cmDate(n)?new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'long',timeZone:'UTC'}).format(new Date(cmDate(n)+'T00:00:00Z')):'';
+  const dateBadge=(n,isSoon=false)=>{const label=shortDate(n)||(isSoon?'À venir':'');return label?'<span class="soon-badge'+(isSoon?' is-soon':' is-date')+'"'+(isSoon?' title="À venir"':'')+'>'+esc(label)+'</span>':'';};
   const lessons = (window.MLF110_LESSONS || []).sort((a,b) => a.number-b.number);
   const tds = window.MLF110_TD || [];
   const main = document.getElementById('main'), sidebar = document.getElementById('sidebar');
@@ -18,7 +19,7 @@
   const math = root => window.SID34Math?.render(root);
   const esc = text => String(text ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let current = null, cleanups = [], slideCleanups = [], printCleanups = [];
-  let deck = [], deckIndex = 0, activeLesson = null, previousFocus, resizeObserver, chromeTimer;
+  let deck = [], deckIndex = 0, activeLesson = null, previousFocus, resizeObserver, chromeTimer, classroomSlide;
   const footer = () => '<footer class="footer">Oumoukelthoum Sidenna · MLF110 · Master DEML · 2026–2027</footer>';
   const sources = data => data.sources?.length ? '<details class="lesson-sources"><summary>Sources et prolongements</summary><ul>' + data.sources.map(s=>'<li><a href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(s.label)+'</a></li>').join('')+'</ul></details>' : '';
   const pdfLink = id => window.MLF110_PDFS?.[id] ? '<a class="secondary-button" href="'+esc(window.MLF110_PDFS[id])+'" download>'+icon('download')+'Notes PDF</a>' : '';
@@ -38,8 +39,9 @@
     sidebar.querySelector('button')?.focus();
   }
   function renderNav() {
-    sidebar.innerHTML='<div class="drawer-header"><a class="brand" href="#cours"><span class="brand-name">Machine Learning</span><span class="brand-code">MLF110</span></a>'+button('×','close-menu','','icon-button')+'</div><p class="drawer-intro">Master DEML · Cours et TD</p><nav aria-label="Séances">'+lessons.map(l=>soon(l)?'<span class="lesson-link is-soon"><span class="chapter-number">'+String(l.number).padStart(2,'0')+'</span><span>'+esc(l.title)+'<small>À venir · '+esc(dateText(l.number))+'</small></span></span>':'<a class="lesson-link '+(current?.id===l.id?'active':'')+'" href="#'+l.id+'"'+(current?.id===l.id?' aria-current="page"':'')+'><span class="chapter-number">'+String(l.number).padStart(2,'0')+'</span><span>'+esc(l.title)+'</span></a>').join('')+'</nav><div class="drawer-links"><a href="#td">Les travaux dirigés</a><a href="#ressources">Ressources et notes PDF</a></div>';
+    sidebar.innerHTML='<div class="drawer-header"><a class="brand" href="#cours"><span class="brand-name">Machine Learning</span><span class="brand-code">MLF110</span></a>'+button('×','close-menu','','icon-button')+'</div><nav class="compact-course-nav" aria-label="Séances">'+lessons.map(l=>soon(l)?'<div class="lesson-link is-soon"><span class="chapter-number">'+String(l.number).padStart(2,'0')+'</span><span class="nav-lesson-title">'+esc(l.title)+'</span>'+dateBadge(l.number,true)+'</div>':'<a class="lesson-link '+(current?.id===l.id?'active':'')+'" href="#'+l.id+'"'+(current?.id===l.id?' aria-current="page"':'')+'><span class="chapter-number">'+String(l.number).padStart(2,'0')+'</span><span>'+esc(l.title)+'</span></a>').join('')+'</nav><div class="drawer-links"><a href="#td">TD</a><a href="#ressources">Ressources</a></div>';
   }
+
   function quizElement(q, index=0, options={}) {
     const el=document.createElement('section'); el.className='ml-quiz';
     const name='quiz-'+(++quizElement.serial);
@@ -59,6 +61,29 @@
     math(el); return el;
   }
   quizElement.serial=0;
+  function compactExperiment(host) {
+    let pending=false;
+    function gather(){
+      pending=false;
+      host.querySelectorAll('.widget-kicker,.as-kicker,.regression-kicker,.split-kicker,.story-kicker').forEach(el=>el.remove());
+      const optional=[...host.querySelectorAll('.widget-intro,.widget-note,.widget-readout>p,.regression-footnote,.split-footnote')].filter(el=>!el.closest('.experiment-details'));
+      if(!optional.length)return;
+      let fold=host.querySelector(':scope > .experiment-details');
+      if(!fold){fold=document.createElement('details');fold.className='experiment-details';fold.innerHTML='<summary>Comprendre</summary><div></div>';host.appendChild(fold);}
+      // A fresh readout replaces its previous explanation when the parameter changes.
+      if(optional.some(el=>el.matches('.widget-readout>p')))fold.lastElementChild.querySelectorAll('[data-compact-key="readout"]').forEach(el=>el.remove());
+      optional.forEach(el=>{
+        const key=el.matches('.widget-readout>p')?'readout':el.className;
+        const same=[...fold.lastElementChild.children].find(x=>x.dataset.compactKey===key&&x.textContent===el.textContent);
+        if(same){el.remove();return;}
+        el.dataset.compactKey=key;fold.lastElementChild.appendChild(el);
+      });
+    }
+    gather();
+    const observer=new MutationObserver(()=>{if(!pending){pending=true;queueMicrotask(gather);}});
+    observer.observe(host,{childList:true,subtree:true});
+    return()=>observer.disconnect();
+  }
   function renderBlock(block, options={}, list=cleanups) {
     if(block.type==='question')return quizElement(block,0,options);
     const el=document.createElement('section');el.className='block ml-block '+esc(block.type);
@@ -75,11 +100,20 @@
       el.innerHTML='<details'+(options.print?' open':'')+'><summary>'+esc(block.title||'Pour aller plus loin')+'</summary><div class="details-body">'+(block.html||'')+'</div></details>';
     }else if(block.type==='story'){
       const story=window[block.name];
-      if(story?.mount){story.mount(el,{static:!!options.print,presentation:!!options.presentation,stage:options.stage||0}); list.push(()=>story.cleanup?.(el));}
+      if(story?.mount){
+        story.mount(el,{static:!!options.print,presentation:!!options.presentation,stage:options.stage||0});list.push(()=>story.cleanup?.(el));
+        if(options.compact&&!options.print){
+          el.querySelector('.as-scroll-toggle[aria-pressed="true"],.split-scroll-toggle[aria-pressed="true"],.regression-mode[aria-pressed="true"]')?.click();
+          list.push(compactExperiment(el));
+        }
+      }
       else {el.textContent='Cette expérience ne peut pas être chargée.';console.error('Missing story',block.name);}
+    }else if(block.type==='classroom'){
+      const controller=window.MLF110Classroom?.mount(block.name,el,{static:!!options.print,presentation:!!options.presentation,stage:options.stage||0});
+      if(controller)list.push(()=>controller.cleanup());
     }else if(block.type==='widget'){
       const widget=window.MLF110Widgets?.[block.name];
-      if(widget?.mount){const cleanup=widget.mount(el,{static:!!options.print,presentation:!!options.presentation});if(typeof cleanup==='function')list.push(cleanup);}
+      if(widget?.mount){const cleanup=widget.mount(el,{static:!!options.print,presentation:!!options.presentation});if(typeof cleanup==='function')list.push(cleanup);if(options.compact&&!options.print)list.push(compactExperiment(el));}
       else {el.textContent='Cette expérience ne peut pas être chargée.';console.error('Missing widget',block.name);}
     }else if(block.type==='figure'){
       el.innerHTML='<figure><img src="'+esc(block.src)+'" alt="'+esc(block.alt||'')+'">'+(block.caption?'<figcaption>'+esc(block.caption)+'</figcaption>':'')+'</figure>';
@@ -88,27 +122,65 @@
   }
   function home() {
     current=null;document.title='MLF110 · Machine Learning fondamental et évaluation des modèles';
-    main.innerHTML='<div class="content home-content"><header class="ml-hero"><div class="eyebrow">MASTER DEML · 2026–2027</div><p class="course-code">MLF110</p><h1>Machine Learning fondamental<br>et évaluation des modèles</h1><p class="lead">Comprendre les modèles, évaluer leurs résultats et justifier ses choix.</p><div class="course-meta"><span>'+icon('definition')+'15 h de cours</span><span>'+icon('exercise')+'18 h de TD</span><span>10 séances de 90 min</span></div><div class="hero-actions"><a class="primary-button" href="#cm01">Commencer le cours '+icon('next')+'</a><a class="text-button" href="#td">Voir les TD</a></div><div class="hero-sketch" aria-hidden="true"><svg viewBox="0 0 210 130"><path d="M18 106H195M22 110V13" fill="none" stroke="#d1d5db" stroke-width="1.5"/><path d="M32 95C55 90 58 70 81 75S110 34 137 45S163 32 188 21" fill="none" stroke="#8a4f8c" stroke-width="3" stroke-linecap="round"/><g fill="white" stroke="#2e6b4f" stroke-width="2"><circle cx="43" cy="87" r="4"/><circle cx="72" cy="64" r="4"/><circle cx="101" cy="68" r="4"/><circle cx="130" cy="36" r="4"/><circle cx="164" cy="45" r="4"/></g></svg></div></header><section class="course-outline"><div class="section-heading"><span class="eyebrow">LE PARCOURS</span><h2>Les séances</h2><p>Les modèles et leur évaluation avancent ensemble.</p></div>'+lessons.map(l=>soon(l)?'<article class="course-row is-soon"><span class="course-row-number">'+String(l.number).padStart(2,'0')+'</span><div><h3>'+esc(l.title)+'</h3>'+dateBadge(l.number,true)+'</div><span class="row-duration">90 min</span></article>':'<article class="course-row"><span class="course-row-number">'+String(l.number).padStart(2,'0')+'</span><div><h3><a href="#'+l.id+'">'+esc(l.title)+'</a></h3>'+dateBadge(l.number)+'<p>'+esc(l.subtitle||l.objective)+'</p><div class="row-links">'+(LABS.includes(l.number)?'<a href="cm'+String(l.number).padStart(2,'0')+'-lab.html">▶ Version interactive</a>':'')+'<a href="#'+l.id+'">Lire la séance '+icon('next')+'</a>'+button(icon('present')+'Présenter','present',l.id,'text-button')+'</div></div><span class="row-duration">90 min</span></article>').join('')+'</section><section class="td-banner"><div><div class="eyebrow">S’ENTRAÎNER ET JUSTIFIER</div><h2>Les travaux dirigés</h2><p>Des calculs, des figures à interpréter et des protocoles à examiner.</p></div><a class="secondary-button" href="#td">Ouvrir les TD '+icon('next')+'</a></section>'+footer()+'</div>';
+    main.innerHTML='<div class="content home-content minimal-home"><header class="lesson-header"><div class="eyebrow">MLF110 · MASTER DEML</div><h1>Le plan du cours</h1></header><section class="course-outline" aria-label="Cours">'+lessons.map(l=>soon(l)?'<article class="course-row is-soon"><span class="course-row-number">'+String(l.number).padStart(2,'0')+'</span><h3>'+esc(l.title)+'</h3>'+dateBadge(l.number,true)+'</article>':'<article class="course-row"><span class="course-row-number">'+String(l.number).padStart(2,'0')+'</span><div><h3><a href="#'+l.id+'">'+esc(l.title)+'</a></h3><div class="row-links"><a href="#'+l.id+'">Cours</a>'+(LABS.includes(l.number)?'<a href="cm'+String(l.number).padStart(2,'0')+'-lab.html">Interactif</a>':'')+button('Présenter','present',l.id,'text-button')+'</div></div>'+dateBadge(l.number)+'</article>').join('')+'</section><a class="compact-td-link" href="#td">Travaux dirigés '+icon('next')+'</a>'+footer()+'</div>';
   }
+
+  function readingLayout(lesson,section) {
+    return window.MLF110Reading?.sections?.[lesson.id+'-'+section.id]||window.MLF110Reading?.sections?.[section.id]||null;
+  }
+  function primaryBlock(block,layout,index){
+    const displayed=layout.overrides?.[index]||block;
+    return displayed.type==='formula'?{...displayed,caption:''}:displayed;
+  }
+  function compactSection(lesson,section,article) {
+    const layout=readingLayout(lesson,section);
+    if(!layout){section.blocks.forEach(b=>article.appendChild(renderBlock(b)));return;}
+    const primary=new Set(layout.primary||[]);
+    const visualFirst=[...primary].some(i=>primaryBlock(section.blocks[i],layout,i).type==='classroom');
+    if(!visualFirst){const summary=document.createElement('p');summary.className='section-idea';summary.textContent=layout.summary;article.appendChild(summary);math(summary);}
+    section.blocks.forEach((block,i)=>{
+      if(!primary.has(i))return;
+      article.appendChild(renderBlock(primaryBlock(block,layout,i),{compact:true}));
+    });
+    const remaining=section.blocks.filter((b,i)=>!primary.has(i)||b.type==='formula'&&b.caption||layout.overrides?.[i]);
+    if(!remaining.length)return;
+    const details=document.createElement('details');details.className='section-details';
+    details.innerHTML='<summary>Détails</summary><div class="section-details-body"></div>';
+    const body=details.lastElementChild;
+    // Mount optional interactive blocks only when requested, keeping their lifecycle intact.
+    let mounted=false;
+    details.addEventListener('toggle',()=>{
+      if(!details.open||mounted)return;mounted=true;
+      remaining.forEach(block=>{
+        if(block.type==='details'){
+          const inner=document.createElement('section');inner.className='block ml-block';inner.innerHTML=(block.title?'<h3>'+esc(block.title)+'</h3>':'')+(block.html||'');body.appendChild(inner);math(inner);
+        }else body.appendChild(renderBlock(block));
+      });math(body);
+    });
+    article.appendChild(details);
+  }
+
   function lessonPage(lesson, sectionId) {
     current=lesson;document.title=lesson.title+' · MLF110';
-    main.innerHTML='<div class="content lesson-content"><header class="lesson-header"><div class="eyebrow">MLF110 · SÉANCE '+String(lesson.number).padStart(2,'0')+' · 90 MIN</div><h1>'+esc(lesson.title)+'</h1><p class="lead">'+esc(lesson.subtitle||lesson.objective)+'</p><p class="lesson-objective"><strong>À l’issue de cette séance</strong> '+esc(lesson.objective)+'</p><div class="lesson-actions">'+(LABS.includes(lesson.number)?'<a class="primary-button lab-link" href="cm'+String(lesson.number).padStart(2,'0')+'-lab.html">▶ Version interactive</a>':'')+button(icon('present')+'Présenter','present',lesson.id,'primary-button')+pdfLink(lesson.id)+button(icon('download')+'Imprimer les notes','print',lesson.id)+'</div></header><details class="lesson-plan"><summary>Le plan de la séance</summary><ol>'+lesson.sections.map((s,i)=>'<li><a href="#'+lesson.id+'/'+s.id+'">'+esc(s.title)+'</a><span>'+s.minutes+' min</span></li>').join('')+'</ol>'+(lesson.prerequisites?.length?'<p class="prereq"><strong>Points d’appui :</strong> '+lesson.prerequisites.map(esc).join(' · ')+'</p>':'')+'</details><div class="lesson-sections"></div><section class="lesson-check"><div class="section-heading"><div class="eyebrow">VÉRIFIER SA COMPRÉHENSION</div><h2>Avant de continuer</h2></div></section><div class="related-td"></div>'+sources(lesson)+'<nav class="lesson-pagination" aria-label="Séances précédente et suivante">'+(lesson.number>1?'<a href="#cm'+String(lesson.number-1).padStart(2,'0')+'">'+icon('prev')+'Séance précédente</a>':'<a href="#cours">Le plan du cours</a>')+(lesson.number<10?'<a href="#cm'+String(lesson.number+1).padStart(2,'0')+'">Séance suivante'+icon('next')+'</a>':'<a href="#td">Les TD'+icon('next')+'</a>')+'</nav>'+footer()+'</div>';
+    const notes=window.MLF110_PDFS?.[lesson.id]?pdfLink(lesson.id):button('Notes','print',lesson.id,'text-button');
+    main.innerHTML='<div class="content lesson-content compact-lesson"><header class="lesson-header"><div class="eyebrow">MLF110 · CM '+String(lesson.number).padStart(2,'0')+' · 90 MIN</div><h1>'+esc(lesson.title)+'</h1><div class="lesson-actions">'+(LABS.includes(lesson.number)?'<a class="primary-button lab-link" href="cm'+String(lesson.number).padStart(2,'0')+'-lab.html">Interactif</a>':'')+button(icon('present')+'Présenter','present',lesson.id,'secondary-button')+notes+'</div></header><details class="lesson-plan"><summary>Plan</summary><p class="plan-objective">'+esc(lesson.objective)+'</p><ol>'+lesson.sections.map(s=>'<li><a href="#'+lesson.id+'/'+s.id+'">'+esc(s.title)+'</a></li>').join('')+'</ol></details><div class="lesson-sections"></div><details class="lesson-check compact-check"><summary>Vérifier sa compréhension</summary><div class="quiz-list"></div></details><div class="related-td"></div>'+sources(lesson)+'<nav class="lesson-pagination" aria-label="Séances précédente et suivante">'+(lesson.number>1?'<a href="#cm'+String(lesson.number-1).padStart(2,'0')+'">'+icon('prev')+'Précédente</a>':'<a href="#cours">'+icon('prev')+'Plan</a>')+(lesson.number<10?'<a href="#cm'+String(lesson.number+1).padStart(2,'0')+'">Suivante'+icon('next')+'</a>':'<a href="#td">TD'+icon('next')+'</a>')+'</nav>'+footer()+'</div>';
     const target=main.querySelector('.lesson-sections');
     lesson.sections.forEach((section,index)=>{
       const article=document.createElement('article');article.className='lesson-slide';article.id=section.id;
-      article.innerHTML='<div class="slide-label"><span>'+String(lesson.number).padStart(2,'0')+'.'+String(index+1).padStart(2,'0')+'</span><span>'+section.minutes+' min</span>'+button(icon('present'),'present-section',lesson.id+'/'+index,'icon-button')+'</div><h2>'+esc(section.title)+'</h2>';
-      section.blocks.forEach(block=>article.appendChild(renderBlock(block)));
-      target.appendChild(article);
+      article.innerHTML='<div class="slide-label"><span>'+String(lesson.number).padStart(2,'0')+'.'+String(index+1).padStart(2,'0')+'</span>'+button(icon('present'),'present-section',lesson.id+'/'+index,'icon-button')+'</div><h2>'+esc(section.title)+'</h2>';
+      compactSection(lesson,section,article);target.appendChild(article);
     });
-    (lesson.quiz||[]).forEach((q,i)=>main.querySelector('.lesson-check').appendChild(quizElement(q,i)));
+    (lesson.quiz||[]).forEach((q,i)=>main.querySelector('.quiz-list').appendChild(quizElement(q,i)));
     const related=tds.filter(t=>!soon(t)&&t.after?.includes(lesson.number));
-    main.querySelector('.related-td').innerHTML=related.length?'<div class="eyebrow">POUR S’ENTRAÎNER</div>'+related.map(t=>'<a class="td-link" href="#td/'+t.id+'"><span>TD '+String(t.number).padStart(2,'0')+'</span><strong>'+esc(t.title)+' '+icon('next')+'</strong></a>').join(''):'';
+    main.querySelector('.related-td').innerHTML=related.map(t=>'<a class="compact-related" href="#td/'+t.id+'">TD '+String(t.number).padStart(2,'0')+' · '+esc(t.title)+' '+icon('next')+'</a>').join('');
     math(main);if(sectionId)requestAnimationFrame(()=>document.getElementById(sectionId)?.scrollIntoView({block:'start'}));
   }
+
   function tdIndex() {
     current=null;document.title='Travaux dirigés · MLF110';
-    main.innerHTML='<div class="content"><header class="lesson-header"><div class="eyebrow">MLF110 · 18 H</div><h1>Travaux dirigés</h1><p class="lead">Prédire, calculer et expliquer avant de comparer les résultats.</p><p>Chaque feuille accompagne les notions du cours. Les données nécessaires sont fournies dans l’énoncé.</p></header><div class="td-list">'+tds.map(t=>soon(t)?'<div class="td-row is-soon"><span class="course-row-number">'+String(t.number).padStart(2,'0')+'</span><span><strong>'+esc(t.title)+'</strong><small>À venir · '+esc(dateText(tdCm(t)))+'</small></span></div>':'<a class="td-row" href="#td/'+t.id+'"><span class="course-row-number">'+String(t.number).padStart(2,'0')+'</span><span><strong>'+esc(t.title)+'</strong><small>Après '+t.after.map(n=>'CM '+String(n).padStart(2,'0')).join(', ')+' · 90 min'+(SCH?' · '+esc(dateText(tdCm(t))):'')+'</small></span><span>'+icon('next')+'</span></a>').join('')+'</div>'+footer()+'</div>';
+    main.innerHTML='<div class="content compact-td-index"><header class="lesson-header"><div class="eyebrow">MLF110</div><h1>Travaux dirigés</h1></header><div class="td-list">'+tds.map(t=>soon(t)?'<div class="td-row is-soon"><span class="course-row-number">'+String(t.number).padStart(2,'0')+'</span><strong>'+esc(t.title)+'</strong>'+dateBadge(tdCm(t),true)+'</div>':'<a class="td-row" href="#td/'+t.id+'"><span class="course-row-number">'+String(t.number).padStart(2,'0')+'</span><strong>'+esc(t.title)+'</strong>'+icon('next')+'</a>').join('')+'</div>'+footer()+'</div>';
   }
+
   function tdPage(td) {
     current=null;document.title=td.title+' · TD '+td.number+' · MLF110';
     if(window.MLF110TD){window.MLF110TD.render(td,main,{esc,icon,button,pdfLink,sources,footer});math(main);return;}
@@ -120,8 +192,10 @@
     main.innerHTML='<div class="content"><header class="lesson-header"><div class="eyebrow">MLF110</div><h1>Ressources</h1><p class="lead">Les notes du cours et les références pour approfondir.</p></header><section class="resource-group"><h2>Notes de cours</h2>'+lessons.map(l=>'<div class="resource-line"><span><strong>'+String(l.number).padStart(2,'0')+'</strong> '+esc(l.title)+'</span>'+(soon(l)?'<small>À venir</small>':window.MLF110_PDFS?.[l.id]?'<a href="'+esc(window.MLF110_PDFS[l.id])+'" download>Notes PDF '+icon('download')+'</a>':button('Notes imprimables','print',l.id,'text-button'))+'</div>').join('')+'</section><section class="resource-group"><h2>Sujets des TD</h2>'+tds.map(t=>'<div class="resource-line"><span>TD '+String(t.number).padStart(2,'0')+' · '+esc(t.title)+'</span>'+(soon(t)?'<small>À venir</small>':window.MLF110_PDFS?.[t.id]?'<a href="'+esc(window.MLF110_PDFS[t.id])+'" download>Sujet PDF '+icon('download')+'</a>':'<a href="#td/'+t.id+'">Ouvrir le sujet '+icon('next')+'</a>')+'</div>').join('')+'</section><section class="resource-group"><h2>Pour approfondir</h2><p>Les explications et exercices sont adaptés des supports d’Oumoukelthoum Sidenna. Les sources précises figurent à la fin des séances.</p><ul><li><a href="https://www.statlearning.com/" target="_blank" rel="noopener">James et al. · An Introduction to Statistical Learning</a></li><li><a href="https://scikit-learn.org/stable/user_guide.html" target="_blank" rel="noopener">scikit-learn · Guide des modèles et de leur évaluation</a></li><li><a href="https://mlu-explain.github.io/" target="_blank" rel="noopener">MLU Explain · Explications visuelles</a></li></ul><p class="resource-credit">Interface, récits du fil rouge et notations adaptés du site SID34. Polices Bitter et Roboto ; rendu mathématique KaTeX. Les nouveaux schémas sont réalisés pour ce support.</p></section>'+footer()+'</div>';
   }
   function soonPage(kind,title,n){
-    main.innerHTML='<div class="content"><header class="lesson-header"><div class="eyebrow">MLF110 · '+esc(kind)+'</div><h1>'+esc(title)+'</h1><p class="lead">'+(cmDate(n)?'Disponible à partir du '+esc(dateText(n))+'.':'Date de diffusion à fixer.')+'</p><p><a class="primary-button" href="#cours">Retour au plan du cours</a></p></header>'+footer()+'</div>';
+    current=null;document.title=title+' · MLF110';
+    main.innerHTML='<div class="content"><header class="lesson-header compact-soon"><div class="eyebrow">MLF110 · '+esc(kind)+'</div><h1>'+esc(title)+'</h1>'+dateBadge(n,true)+'<a class="compact-back" href="#cours">'+icon('prev')+'Plan du cours</a></header>'+footer()+'</div>';
   }
+
   function route(){
     if(!presentation.hidden)closePresentation();
     reset(cleanups);cleanStory(main);closeMenu();
@@ -137,13 +211,19 @@
     return lesson.sections.flatMap((section,sectionIndex)=>{
       const chunks=[];let pending=[];
       const flush=()=>{if(pending.length){chunks.push({blocks:pending});pending=[];}};
-      section.blocks.forEach(block=>{
+      const layout=readingLayout(lesson,section);
+      const primary=layout?(layout.primary||[]).filter(i=>section.blocks[i]).map(i=>primaryBlock(section.blocks[i],layout,i)):[];
+      const visible=layout?[...(primary.some(b=>b.type==='classroom')?[]:[{type:'prose',html:'<p>'+esc(layout.summary)+'</p>'}]),...primary]:section.blocks;
+      visible.forEach(block=>{
         if(block.type==='details')return;
         if(block.type==='story'){
           flush();const story=window[block.name];
           const stages=story?.stages||[];
           if(stages.length)stages.forEach((stage,i)=>chunks.push({blocks:[block],stage:i,stageTitle:stage.title}));
           else chunks.push({blocks:[block]});
+        }else if(block.type==='classroom'){
+          flush();const steps=window.MLF110ClassroomScenes?.[block.name]?.steps||[];
+          steps.forEach((step,i)=>chunks.push({blocks:[block],stage:i,stageTitle:step.question||step.label}));
         }else if(block.type==='widget'){flush();chunks.push({blocks:[block]});}
         else {pending.push(block);if(pending.length===2||block.type==='table'||block.type==='question')flush();}
       });flush();
@@ -170,20 +250,32 @@
     canvas.dataset.contentScale=s.toFixed(3);
   }
   function renderSlide(){
+    const entry=deck[deckIndex],sceneBlock=entry.blocks.length===1&&entry.blocks[0].type==='classroom'?entry.blocks[0]:null;
+    if(sceneBlock&&classroomSlide?.controller&&classroomSlide.name===sceneBlock.name){
+      classroomSlide.controller.setStep(entry.stage||0,{animate:true});updateSlideLabels(entry);requestAnimationFrame(fitSlide);wakeChrome();return;
+    }
     reset(slideCleanups);cleanStory(presentation);resizeObserver?.disconnect();
-    const entry=deck[deckIndex];
+    classroomSlide=null;
     presentation.innerHTML='<div class="presentation-chrome presentation-top"><span>MLF110 · CM '+String(activeLesson.number).padStart(2,'0')+'</span><span>'+esc(activeLesson.title)+'</span>'+button('Quitter · Échap','close-presentation','','text-button')+'</div><div class="presentation-canvas"><div class="presentation-eyebrow">PARTIE '+(entry.sectionIndex+1)+' · '+entry.section.minutes+' MIN'+(entry.parts>1?' · '+entry.part+'/'+entry.parts:'')+'</div><h2>'+esc(entry.stageTitle||entry.section.title)+'</h2><div class="slide-body"><div class="slide-body-inner"></div></div></div><div class="presentation-chrome presentation-bottom">'+button(icon('prev')+'Précédente','previous-slide','','secondary-button')+'<span class="slide-counter" aria-live="polite">'+(deckIndex+1)+' / '+deck.length+'</span>'+button('Suivante'+icon('next'),'next-slide','','primary-button')+'</div><div class="presentation-progress"><i style="width:'+((deckIndex+1)/deck.length*100)+'%"></i></div>';
     const container=presentation.querySelector('.slide-body-inner');
-    entry.blocks.forEach(b=>container.appendChild(renderBlock(b,{presentation:true,stage:entry.stage||0},slideCleanups)));
-    presentation.querySelector('[data-action="previous-slide"]').disabled=deckIndex===0;
-    presentation.querySelector('[data-action="next-slide"]').disabled=deckIndex===deck.length-1;
+    entry.blocks.forEach(b=>container.appendChild(renderBlock(b,{presentation:true,compact:true,stage:entry.stage||0},slideCleanups)));
+    if(sceneBlock)classroomSlide={name:sceneBlock.name,controller:container.querySelector('.classroom')?.classroomController};
+    updateSlideLabels(entry);
     math(presentation);resizeObserver=new ResizeObserver(fitSlide);resizeObserver.observe(container);
     requestAnimationFrame(fitSlide);document.fonts.ready.then(fitSlide);wakeChrome();
+  }
+  function updateSlideLabels(entry){
+    presentation.querySelector('.presentation-canvas>h2').textContent=entry.stageTitle||entry.section.title;
+    presentation.querySelector('.presentation-eyebrow').textContent='PARTIE '+(entry.sectionIndex+1)+' · '+entry.section.minutes+' MIN'+(entry.parts>1?' · '+entry.part+'/'+entry.parts:'');
+    presentation.querySelector('.slide-counter').textContent=(deckIndex+1)+' / '+deck.length;
+    presentation.querySelector('.presentation-progress>i').style.width=((deckIndex+1)/deck.length*100)+'%';
+    presentation.querySelector('[data-action="previous-slide"]').disabled=deckIndex===0;
+    presentation.querySelector('[data-action="next-slide"]').disabled=deckIndex===deck.length-1;
   }
   function stepSlide(delta){if(deckIndex+delta<0||deckIndex+delta>=deck.length)return;deckIndex+=delta;renderSlide();}
   function closePresentation(){
     reset(slideCleanups);cleanStory(presentation);resizeObserver?.disconnect();clearTimeout(chromeTimer);
-    presentation.hidden=true;presentation.innerHTML='';presentation.classList.remove('chrome-idle');document.body.classList.remove('is-presenting');
+    classroomSlide=null;presentation.hidden=true;presentation.innerHTML='';presentation.classList.remove('chrome-idle');document.body.classList.remove('is-presenting');
     document.querySelector('.site-header').inert=false;main.inert=false;previousFocus?.focus?.({preventScroll:true});
   }
   function wakeChrome(){presentation.classList.remove('chrome-idle');clearTimeout(chromeTimer);if(!matchMedia('(pointer:coarse)').matches)chromeTimer=setTimeout(()=>presentation.classList.add('chrome-idle'),3500);}
@@ -194,7 +286,7 @@
     items.forEach(item=>{
       const article=document.createElement('article');article.className='print-lesson';
       article.innerHTML='<header><p class="eyebrow">MLF110 · MASTER DEML · '+(kind==='td'?'TD ':'CM ')+String(item.number).padStart(2,'0')+' · 90 MIN</p><h1>'+esc(item.title)+'</h1><p>'+esc(item.objective)+'</p></header>';
-      if(kind==='td')item.parts.forEach((p,i)=>{const el=document.createElement('section');el.className='print-section';const d=window.MLF110TD?.design(p.id),mn=d?window.MLF110TD.minutes(p,d):p.minutes;el.innerHTML='<h2>'+(i+1)+'. '+esc(p.title)+' <small>('+(mn?mn+' min':'pour aller plus loin')+')</small></h2>'+(d?window.MLF110TD.body(p,d):p.prompt);article.appendChild(el);});
+      if(kind==='td')item.parts.forEach((p,i)=>{const el=document.createElement('section');el.className='print-section';const d=window.MLF110TD?.design(p.id),mn=d?window.MLF110TD.minutes(p,d):p.minutes;el.innerHTML='<h2>'+(i+1)+'. '+esc(p.title)+' <small>('+(mn?mn+' min':'pour aller plus loin')+')</small></h2>'+(d?window.MLF110TD.body(p,d,{print:true}):p.prompt);article.appendChild(el);});
       else item.sections.forEach((s,i)=>{
         const el=document.createElement('section');el.className='print-section';el.innerHTML='<h2>'+(i+1)+'. '+esc(s.title)+'</h2>';
         s.blocks.forEach(b=>el.appendChild(renderBlock(b,{print:true},printCleanups)));article.appendChild(el);
@@ -220,7 +312,7 @@
   backdrop.addEventListener('click',closeMenu);
   sidebar.addEventListener('click',e=>{if(e.target.closest('a'))closeMenu();});
   presentation.addEventListener('pointermove',wakeChrome);
-  presentation.addEventListener('click',event=>{if(!event.target.closest('button,a,input,select,summary,label,svg,[role="button"],.ml-quiz,.as-plot,.widget-plot')&&event.target.closest('.presentation-canvas'))stepSlide(event.shiftKey?-1:1);});
+  presentation.addEventListener('click',event=>{if(!event.target.closest('button,a,input,select,summary,label,svg,[role="button"],.ml-quiz,.as-plot,.widget-plot,.classroom-scene')&&event.target.closest('.presentation-canvas'))stepSlide(event.shiftKey?-1:1);});
   document.addEventListener('keydown',event=>{
     if(event.key==='Escape'){if(!presentation.hidden)closePresentation();else{closeMenu();menu.focus();}return;}
     const trap=!presentation.hidden?presentation:sidebar.classList.contains('open')?sidebar:null;

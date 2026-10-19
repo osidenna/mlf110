@@ -77,3 +77,115 @@ body.is-presenting{overflow:hidden}.ml-presentation{position:fixed;inset:0;z-ind
 .td-step.is-extra{color:#6e7380;font-style:italic}
 .td-step.is-extra+ol{color:#464d5c}
 .td-ex.is-extra .eyebrow{color:#6e7380}
+
+/* Lecture sobre : une idée, un visuel ; le développement s'ouvre à la demande. */
+.minimal-home{max-width:800px!important}
+.minimal-home .lesson-header{padding:8px 0 28px}
+.minimal-home .lesson-header h1{font-size:36px;margin-bottom:0}
+.minimal-home .course-outline{padding:0}
+.minimal-home .course-row{grid-template-columns:30px minmax(0,1fr) auto;gap:16px;padding:22px 0;align-items:baseline}
+.minimal-home .course-row h3{font-size:21px;margin:0}
+.minimal-home .course-row .row-links{margin-top:10px;gap:22px;font-size:12px;font-weight:400}
+.minimal-home .course-row .row-links .text-button{font-size:12px;font-weight:400;padding:0}
+.minimal-home .course-row-number{font-size:15px;color:var(--muted)}
+.minimal-home .course-row.is-soon{padding:15px 0;border-top-color:#ececef}
+.minimal-home .course-row.is-soon h3{font-size:19px;font-weight:400;line-height:1.45;color:var(--muted)}
+.soon-badge{margin:0;align-self:center;font-size:11px;padding:2px 9px;line-height:1.6}
+.soon-badge.is-date{background:none;color:var(--muted);padding:0;font-weight:400}
+.compact-td-link{display:flex;align-items:center;justify-content:space-between;margin-top:22px;padding:22px 0;border-top:1px solid var(--line);font:700 20px/1.4 var(--serif);text-decoration:none}
+.compact-course-nav .lesson-link{gap:11px;padding:12px 0;font-size:13px;line-height:1.5}
+.compact-course-nav .lesson-link .chapter-number{font-size:12px;min-width:19px}
+.compact-course-nav .lesson-link.is-soon{opacity:1;color:var(--muted);align-items:center}
+.compact-course-nav .nav-lesson-title{flex:1;min-width:0}
+.compact-course-nav .soon-badge{font-size:10px;padding:2px 7px;flex:none}
+.compact-lesson .lesson-header{padding-bottom:18px}
+.compact-lesson .lesson-header h1{font-size:35px;margin-bottom:20px}
+.compact-lesson .lesson-actions{margin:0;gap:18px}
+.compact-lesson .lesson-actions .primary-button,.compact-lesson .lesson-actions .secondary-button{font-size:12px;padding:8px 13px}
+.compact-lesson .lesson-plan{padding:8px 0 14px;margin-bottom:6px;border:0;border-radius:0;background:none}
+.compact-lesson .lesson-plan>summary{padding:0;font-size:13px;font-weight:400;color:var(--muted)}
+.compact-lesson .lesson-plan>summary::after{font-size:14px}
+.plan-objective{font-size:14px;color:var(--ink-2);line-height:1.7;margin:15px 0 0}
+.compact-lesson .lesson-slide{padding:27px 0 30px}
+.compact-lesson .slide-label{margin-bottom:10px;justify-content:space-between}
+.compact-lesson .lesson-slide h2{font-size:26px;margin-bottom:15px}
+.section-idea{font-size:18px;line-height:1.7;max-width:720px;margin-bottom:22px;color:var(--ink)}
+.compact-lesson .lesson-slide>.section-idea,.compact-lesson .lesson-slide>.section-details{max-width:800px;margin-left:auto;margin-right:auto}
+.section-details{margin:18px 0 0;font-size:14px}
+.section-details>summary,.compact-check>summary,.td-outline>summary{display:block;list-style:none;cursor:pointer;font-size:13px;font-weight:400;line-height:1.6;color:var(--muted)}
+.section-details>summary::-webkit-details-marker,.compact-check>summary::-webkit-details-marker,.td-outline>summary::-webkit-details-marker{display:none}
+.section-details>summary::after{content:' +';margin-left:4px}
+.section-details[open]>summary::after{content:' −'}
+.section-details>summary:hover,.compact-check>summary:hover,.td-outline>summary:hover{color:var(--ink)}
+.section-details-body{margin-top:20px;padding-left:18px;border-left:1px solid var(--line)}
+.section-details-body .ml-block{font-size:16px;line-height:1.8}
+.section-details-body h3{font:700 17px/1.45 var(--sans);margin:18px 0 10px}
+.section-details-body .callout{background:none;padding:10px 15px;font-size:15px}
+.section-details-body .ml-formula{font-size:16px}
+.experiment-details{margin:14px 0 0;padding-top:8px;font-size:13px;color:var(--muted)}
+.experiment-details>summary{cursor:pointer;list-style:none;font-size:12px;font-weight:400}
+.experiment-details>summary::after{content:' +'}
+.experiment-details[open]>summary::after{content:' −'}
+.experiment-details>div{padding-top:13px;font-size:14px;line-height:1.7;color:var(--ink-2)}
+.experiment-details>div>p{font-size:14px;line-height:1.7;margin:0 0 10px}
+.compact-check{padding:17px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.compact-check>summary::after,.td-outline>summary::after{content:'+';float:right}
+.compact-check[open]>summary::after,.td-outline[open]>summary::after{content:'−'}
+.compact-related{display:flex;gap:12px;justify-content:space-between;align-items:center;margin:15px 0;font-size:14px;text-decoration:none}
+.compact-soon{padding-top:30px;max-width:700px}
+.compact-soon h1{font-size:32px;margin-bottom:20px}
+.compact-back{display:flex;align-items:center;gap:8px;margin-top:42px;font-size:13px;text-decoration:none}
+.compact-td-index .lesson-header{padding-bottom:24px}
+.compact-td-index .td-row{grid-template-columns:28px minmax(0,1fr) auto;gap:17px;padding:20px 0}
+.compact-td-index .td-row strong{font-size:20px;line-height:1.45}
+.compact-td-index .td-row.is-soon{padding:14px 0}
+.compact-td-index .td-row.is-soon strong{font-size:18px;font-weight:400;color:var(--muted)}
+.compact-td-index .course-row-number{font-size:14px;color:var(--muted)}
+/* TD : énoncé et données d'abord, outils discrets, compléments fermés. */
+.td-content .breadcrumb{margin-bottom:16px;font-size:12px}
+.td-content .lesson-header{padding-bottom:18px}
+.td-content .lesson-header h1{font-size:34px;margin-bottom:18px}
+.td-content .lesson-actions{margin:0}
+.td-content .lesson-actions button{font-size:12px;padding:7px 11px;background:none;border-width:1px}
+.td-outline{padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 0 28px;font-size:14px}
+.td-outline>p{margin:14px 0;color:var(--muted)}
+.td-outline .td-index{margin:16px 0;border:0}
+.td-outline .td-index a{grid-template-columns:24px 1fr auto;padding:8px 0;font-size:13px;gap:9px}
+.td-outline .td-index-title{font-weight:400}
+.td-content .td-ex{margin:26px 0 0;padding:24px 0 0;border-top:1px solid var(--line);scroll-margin-top:90px}
+.td-content .td-ex:first-of-type{border-top:0;padding-top:0}
+.td-content .td-ex-head{display:block;margin-bottom:12px}
+.td-content .td-ex-head .eyebrow{font-size:10px;letter-spacing:.08em;margin-bottom:8px}
+.td-content .td-ex-head h2{font-size:25px;line-height:1.4}
+.td-ex-tools{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin:8px 0 20px;font-size:12px;line-height:1.6;color:var(--muted)}
+.td-ex-tools .td-ai-badge{font-size:11px;font-weight:400;letter-spacing:0;padding:0;background:none;color:var(--muted);white-space:normal}
+.td-status-select{border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;color:var(--muted);font:400 11px var(--sans);padding:4px 17px 4px 0;cursor:pointer}
+.td-content .td-ex-body{font-size:17px;line-height:1.75}
+.td-content .td-ex-body p{margin:0 0 16px}
+.td-content .td-ex-body ol{padding-left:22px;margin:15px 0 22px}
+.td-content .td-ex-body li{padding-left:4px;margin:10px 0}
+.td-content .td-ex-body table{width:100%;border-collapse:collapse;font-size:14px;line-height:1.6;margin:20px 0}
+.td-content .td-ex-body td,.td-content .td-ex-body th{padding:10px 11px;text-align:left;border-bottom:1px solid var(--line)}
+.td-content .td-ex-body th{font-size:12px;font-weight:700}
+.td-content .td-reveals{display:flex;flex-wrap:wrap;align-items:baseline;gap:7px 20px;border-top:0;padding:5px 0 0;margin-top:15px}
+.td-content .td-reveal{border:0;background:none;border-radius:0;padding:0;font-size:14px;flex:0 1 auto}
+.td-content .td-reveal>summary{display:flex;gap:6px;align-items:center;font-size:12px;font-weight:400;color:var(--muted);padding:3px 0}
+.td-content .td-reveal>summary svg{width:13px;height:13px}
+.td-content .td-reveal[open]{flex-basis:100%}
+.td-content .td-reveal>div{padding:14px 0 8px;font-size:15px;line-height:1.7}
+.td-content .td-support p{font-size:14px;font-style:normal}
+.td-extra{margin:15px 0;font-size:15px}
+.td-extra>summary{cursor:pointer;color:var(--muted);font-size:13px;font-weight:400;padding:3px 0}
+.td-extra-exercise>summary{display:flex;justify-content:space-between;gap:14px;line-height:1.6}
+.td-extra-exercise>summary span{font-size:11px;white-space:nowrap}
+.td-extra-exercise[open]>summary{color:var(--ink);margin-bottom:18px}
+.td-reference{margin:15px 0;font-size:13px;color:var(--muted)}
+.td-oral-panel>summary{display:flex;justify-content:space-between;gap:16px;cursor:pointer;font:400 14px/1.6 var(--sans);color:var(--muted);list-style:none}
+.td-oral-panel>summary span:last-child{font-size:12px}
+.td-oral-panel[open]>.td-ex-body{padding-top:20px}
+.td-oral-panel>summary::after{content:'+'}
+.td-oral-panel[open]>summary::after{content:'−'}
+@media(max-width:600px){
+ .minimal-home .lesson-header h1{font-size:30px}.minimal-home .course-row{gap:12px;grid-template-columns:24px minmax(0,1fr) auto}.minimal-home .course-row h3{font-size:19px}.minimal-home .course-row.is-soon h3{font-size:17px}.minimal-home .course-row .row-links{gap:18px}.soon-badge{font-size:10px;padding:2px 7px}.compact-course-nav .lesson-link{font-size:13px}.compact-lesson .lesson-header h1,.td-content .lesson-header h1{font-size:29px}.compact-lesson .lesson-slide h2{font-size:23px}.section-idea{font-size:17px;line-height:1.65}.section-details-body{padding-left:12px}.section-details-body .ml-block{font-size:15px}.compact-td-index .td-row strong{font-size:18px}.compact-td-index .td-row.is-soon strong{font-size:16px}.td-content .td-ex-head h2{font-size:22px}.td-content .td-ex-body{font-size:16px}.td-content .td-ex-body table{font-size:12px}.td-content .td-ex-body td,.td-content .td-ex-body th{padding:8px}.td-ex-tools{gap:8px}.td-status-select{font-size:10px}.td-extra-exercise>summary{display:block}.td-extra-exercise>summary span{display:block;margin-top:3px}.compact-soon h1{font-size:27px}
+}
+@media print{.section-details-body{border:0;padding:0}.td-ex-tools,.td-outline,.td-support,.td-status-select{display:none!important}.td-extra>summary{font-size:10pt}.td-extra{margin:10pt 0}.ml-print-root .td-extra{display:block}.ml-print-root .td-extra-exercise{display:block}.td-oral-panel>summary{font-size:12pt}}

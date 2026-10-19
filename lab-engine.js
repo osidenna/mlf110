@@ -45,46 +45,61 @@
 
     root.innerHTML = '';
     const top = el('header', 'lab-top'), topIn = el('div', 'lab-top-inner');
-    topIn.append(el('a', 'lab-brand', `${course.code} <small>${course.title}</small>`));
-    topIn.querySelector('a').href = course.home || '#';
-    const bar = el('nav', 'lab-progress'); bar.setAttribute('aria-label', 'Progression');
-    const present = el('button', 'lab-icon present', '⛶ Présenter'); present.type = 'button';
-    topIn.append(bar, present); top.append(topIn);
+    const brand = el('a', 'lab-brand', course.code);
+    brand.href = course.home || '#'; brand.title = course.title;
+    brand.setAttribute('aria-label', `${course.code} — ${course.title}`);
+    topIn.append(brand);
+    const outline = el('details', 'lab-outline'), count = el('summary', 'lab-step-count');
+    const bar = el('nav', 'lab-progress'); bar.setAttribute('aria-label', 'Étapes de la séance');
+    outline.append(count, bar);
+    const present = el('button', 'lab-icon present', '⛶'); present.type = 'button';
+    present.title = 'Présenter'; present.setAttribute('aria-label', 'Présenter');
+    topIn.append(outline, present); top.append(topIn);
     const screen = el('main', 'lab-screen'); screen.id = 'main'; screen.tabIndex = -1;
     const bottom = el('footer', 'lab-bottom'), botIn = el('div', 'lab-bottom-inner');
-    const back = el('button', 'lab-btn ghost', '← Retour'), hint = el('span', 'lab-hint'), next = el('button', 'lab-btn', 'Continuer');
+    const back = el('button', 'lab-btn ghost', '← Retour'), next = el('button', 'lab-btn', 'Continuer');
     back.type = next.type = 'button';
-    botIn.append(back, hint, next); bottom.append(botIn);
+    botIn.append(back, next); bottom.append(botIn);
     root.append(top, screen, bottom);
 
     steps.forEach((s, i) => {
-      const seg = el('span'); seg.title = `${i + 1}. ${s.title}`;
-      seg.addEventListener('click', () => go(i)); bar.append(seg);
+      const seg = el('button', '', `<span>${i + 1}</span>${s.title}`); seg.type = 'button';
+      seg.title = `${s.chapter.title}${s.chapter.minutes ? ' · ' + s.chapter.minutes + ' min' : ''}`;
+      seg.addEventListener('click', () => { outline.open = false; go(i); }); bar.append(seg);
     });
 
     function go(i) {
       if (i < 0 || i >= steps.length) return;
+      outline.open = false;
       index = i; history.replaceState(null, '', '#s' + (i + 1)); render(); screen.focus({preventScroll: true}); window.scrollTo(0, 0);
     }
     function render() {
       teardown.forEach(f => f()); teardown = [];
       const s = steps[index];
-      [...bar.children].forEach((seg, i) => { seg.className = i === index ? 'now' : solved.has(i) ? 'done' : ''; });
+      count.textContent = `${index + 1} / ${steps.length}`;
+      count.setAttribute('aria-label', `Étape ${index + 1} sur ${steps.length} : ${s.title}. Ouvrir le plan`);
+      [...bar.children].forEach((seg, i) => {
+        seg.className = i === index ? 'now' : solved.has(i) ? 'done' : '';
+        if (i === index) seg.setAttribute('aria-current', 'step'); else seg.removeAttribute('aria-current');
+      });
       screen.innerHTML = '';
-      const ch = s.chapter;
-      screen.append(el('div', 'lab-chapter', `${ch.title}<span>${ch.minutes ? ch.minutes + ' min · ' : ''}étape ${index + 1}/${steps.length}</span>`));
       screen.append(el('h1', 'lab-title', s.title));
       if (s.prompt) screen.append(el('p', 'lab-prompt', s.prompt));
       const visual = el('div', 'lab-visual'), controls = el('div', 'lab-controls'), extra = el('div');
       const feedback = el('div', 'lab-feedback');
       feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite');
       screen.append(visual, controls, extra, feedback);
-      if (s.details) {
-        const d = el('details', 'lab-details', `<summary>Détails</summary>${s.details}`);
-        screen.append(d); window.SID34Math?.render?.(d);
+      if (s.hint || s.details) {
+        const help = el('div', 'lab-help');
+        if (s.hint) help.append(el('details', 'lab-details', `<summary>Aide</summary><p>${s.hint}</p>`));
+        if (s.details) help.append(el('details', 'lab-details', `<summary>Comprendre</summary>${s.details}`));
+        screen.append(help); window.SID34Math?.render?.(help);
       }
       let unlocked = solved.has(index) || !!s.free;
-      const setNext = () => { next.disabled = !unlocked; hint.textContent = unlocked ? '' : (s.hint || 'Répondez pour continuer'); };
+      const setNext = () => {
+        next.disabled = !unlocked;
+        next.title = unlocked ? '' : 'Terminez cette étape pour continuer';
+      };
       next.textContent = index === steps.length - 1 ? 'Terminer' : 'Continuer';
       back.disabled = index === 0;
       const ctx = {
@@ -119,7 +134,7 @@
           return box;
         },
         goal(text) {
-          const g = el('div', 'lab-goal', text); extra.append(g);
+          const g = el('div', 'lab-goal', text); controls.after(g);
           return {met(html) { if (!g.classList.contains('met')) { g.classList.add('met'); ctx.unlock(); if (html) ctx.say('good', html); } }, el: g};
         },
         slider({label, values, value, format = v => v, onInput, into}) {
@@ -145,6 +160,15 @@
       };
       setNext();
       s.render(ctx);
+      // Le bilan reste disponible sans ajouter un dernier écran de texte.
+      const recap = s.free && visual.querySelector('.lab-recap');
+      if (recap) {
+        screen.querySelector('.lab-title').textContent = 'Séance terminée';
+        screen.querySelector('.lab-prompt')?.remove();
+        const details = el('details', 'lab-details lab-recap-details', '<summary>À retenir</summary>');
+        recap.before(details); details.append(recap);
+        visual.classList.add('lab-finish');
+      }
       window.SID34Math?.render?.(screen);
     }
 
@@ -153,13 +177,16 @@
     document.addEventListener('keydown', ev => {
       if (ev.defaultPrevented || ev.target.closest('input,textarea,select,.lab-visual')) return;
       const presenting = document.body.classList.contains('presenting');
+      if (ev.key === 'Escape' && outline.open) { outline.open = false; count.focus(); return; }
       if (ev.key === 'ArrowRight' || ev.key === 'PageDown') { if (!next.disabled || presenting) go(index + 1); }
       else if (ev.key === 'ArrowLeft' || ev.key === 'PageUp') go(index - 1);
       else if (ev.key === 'Escape' && presenting) togglePresent(false);
     });
     function togglePresent(on) {
       document.body.classList.toggle('presenting', on);
-      present.textContent = on ? '✕ Quitter' : '⛶ Présenter';
+      present.textContent = on ? '✕' : '⛶';
+      present.title = on ? 'Quitter la présentation' : 'Présenter';
+      present.setAttribute('aria-label', present.title);
       if (on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
       if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
     }
