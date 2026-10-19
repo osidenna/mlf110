@@ -1,217 +1,255 @@
-/* MLF110 · CM 01 — Problèmes, données et baselines, version « apprendre en faisant ».
-   Données : les 40 animaux SID34 (rôles fixés 24/8/8). Nombres calculés à l'exécution. */
+/* MLF110 · CM 01 — Problèmes, données et références. Séance unique (prototype de docs/DESIGN.md).
+   Un plateau par chapitre : les animaux SID34 glissent d'une étape à l'autre.
+   Chaque étape : s'engager (prédiction), voir (révélation sur le plateau), comparer. Nombres calculés ici. */
 (function () {
   'use strict';
-  const A = window.Animals, C = window.CM06, L = window.Lab, K = window.LabKit, fr = L.fr;
-  const {headSvg, word} = K;
-  const train = C.train, val = C.animals.filter(a => a.role === 'validation');
+  const A = window.Animals, C = window.CM06, L = window.Lab, fr = L.fr;
+  const train = A.animals.filter(a => a.role === 'train'), val = A.animals.filter(a => a.role === 'validation'), test = A.animals.filter(a => a.role === 'test');
+  const all = [...train, ...val, ...test];
+  const byId = id => A.animals.find(a => a.id === id);
   const mean = xs => xs.reduce((s, v) => s + v, 0) / xs.length;
-  const errRule = (t, pool) => pool.filter(a => (a.x1 >= t ? 1 : 0) !== a.y).length;
-  const cuts = (() => { const ws = [...new Set(train.map(a => a.x1))].sort((a, b) => a - b); return ws.slice(1).map((w, i) => +((w + ws[i]) / 2).toFixed(2)); })();
-  const minRuleErr = Math.min(...cuts.map(t => errRule(t, train)));
-  const wMean = mean(train.map(a => a.x1));
+  const W = 760, H = 430, BAD = '#c24a26', GOOD = '#2f7d4f', ACT = '#7b1e2e', MUTED = '#6b6f7a';
+  const sortedTrain = [...train].sort((a, b) => a.y - b.y || a.id - b.id);
 
-  // Bande de points sur l'axe des poids : une ligne de chats, une ligne de chiens.
-  function weightStrip(ctx, o = {}) {
-    const f = K.frame(ctx, {x: [2, 13], y: [0, 2], w: 484, h: 150, xticks: 1, yticks: 5, xfmt: v => (v % 2 ? '' : v), yfmt: () => '', xl: 'Poids (kg)', label: 'Poids des animaux', layers: ['zone', 'pts', 'thr'], noclip: ['pts', 'thr']});
-    const seen = {};
-    f.layer('pts').innerHTML = (o.pool || train).map(a => {
-      const key = a.y + ':' + a.x1, n = seen[key] = (seen[key] || 0) + 1;
-      return `<g transform="translate(${f.X(a.x1)},${f.Y(a.y ? .55 : 1.45) - (n - 1) * 14}) scale(.9)">${A.head(a.kind)}</g>`;
-    }).join('') + `<text class="tick" x="${f.X(2.1)}" y="${f.Y(1.85)}">chats</text><text class="tick" x="${f.X(2.1)}" y="${f.Y(.95)}">chiens</text>`;
-    let t = o.t ?? null;
-    const draw = () => {
-      if (t == null) return;
-      f.layer('zone').innerHTML = `<rect class="pos-zone" x="${f.X(t)}" y="${f.Y(2)}" width="${f.X(13) - f.X(t)}" height="${f.Y(0) - f.Y(2)}"/>`;
-      f.layer('thr').innerHTML = `<line class="thr" x1="${f.X(t)}" x2="${f.X(t)}" y1="${f.Y(2)}" y2="${f.Y(0)}"/><rect class="thr-handle" x="${f.X(t) - 9}" y="${f.Y(0) - 9}" width="18" height="18" rx="5"/><text class="tick" x="${f.X(t)}" y="${f.Y(2) + 12}" text-anchor="middle" font-weight="700" fill="#7b1e2e">${fr(t, 2)} kg</text>`;
-      o.onMove?.(t);
-    };
-    if (t != null) {
-      K.draggable(f, p => { t = Math.round(Math.min(12.5, Math.max(2.5, p.x)) * 20) / 20; draw(); });
-      f.svg.tabIndex = 0;
-      f.svg.addEventListener('keydown', ev => { const d = {ArrowLeft: -.05, ArrowRight: .05}[ev.key]; if (d) { ev.preventDefault(); t = Math.round(Math.min(12.5, Math.max(2.5, t + d)) * 20) / 20; draw(); } });
-    }
-    draw();
-    return {f, set(v) { t = v; draw(); }};
-  }
+  // Règles écrites, puis règle apprise (régression logistique de référence, CM 5).
+  const RULE = [a => (a.x1 > 6 ? 1 : 0), a => (a.x1 > 6 && a.x2 < 5 ? 1 : 0), a => (a.x1 > 6 && a.x2 < 5 ? (a.x2 < 2 && a.x1 < 8 ? 0 : 1) : 0)];
+  const M = A.reference, learned = a => (A.prob(M, a) >= .5 ? 1 : 0);
+  const wrong = (r, P) => P.filter(a => r(a) !== a.y);
+  const E = RULE.map(r => wrong(r, train)), EL = wrong(learned, train), EV = wrong(learned, val);
+  const fixedCat = E[1][0], brokenDog = E[2].find(a => !E[1].includes(a));
+  // Une seule question sur le poids : meilleur seuil sur l'apprentissage.
+  const ws = [...new Set(train.map(a => a.x1))].sort((a, b) => a - b), cuts = ws.slice(1).map((w, i) => +((w + ws[i]) / 2).toFixed(2));
+  const cutErr = (t, P) => P.filter(a => (a.x1 >= t ? 1 : 0) !== a.y).length;
+  const minCut = Math.min(...cuts.map(t => cutErr(t, train))), bestCut = cuts.find(t => cutErr(t, train) === minCut);
+  const catMax = Math.max(...train.filter(a => !a.y).map(a => a.x1)), dogMin = Math.min(...train.filter(a => a.y).map(a => a.x1));
+  const wMean = mean(train.map(a => a.x1)), mse = c => mean(train.map(a => (a.x1 - c) ** 2));
+  const nn1 = a => C.decide(C.score(a, 1, 'kg', train));
+  const nnTrainErr = wrong(nn1, train).length, nnValErr = wrong(nn1, val).length;
+
+  // ---------- Dispositions du plateau ----------
+  const grid = (st, P, {cols = 8, top = 70, gap = 88, s = 2.2} = {}) => {
+    const cw = (W - 80) / cols, pos = {};
+    P.forEach((a, i) => { const x = 40 + cw * (i % cols + .5), y = top + gap * Math.floor(i / cols); pos[a.id] = [x, y]; st.put(a.id, {x, y, s}); });
+    return pos;
+  };
+  const marks = (pos, P, judge) => P.map(a => { const [x, y] = pos[a.id], ok = judge(a) === a.y;
+    return `<circle cx="${x}" cy="${y}" r="27" fill="none" stroke="${ok ? GOOD : BAD}" stroke-width="${ok ? 1.5 : 3.5}" ${ok ? 'opacity=".45"' : ''}/>` +
+      (ok ? '' : `<text x="${x + 20}" y="${y - 16}" font-size="18" font-weight="700" fill="${BAD}">✗</text>`); }).join('');
+  const codeCard = lines => `<g transform="translate(${W - 330},${H - 22 - lines.length * 19})"><rect width="320" height="${lines.length * 19 + 14}" rx="10" fill="#faf6ef" stroke="#e9e3d8"/>` +
+    lines.map((l, i) => `<text x="12" y="${22 + i * 19}" font-family="ui-monospace,Menlo,monospace" font-size="12.5" fill="#1d2433" xml:space="preserve">${l.replace(/</g, '&lt;')}</text>`).join('') + '</g>';
+  const scatter = (st, P, s = 1.25, o = 1) => {
+    const {X, Y} = st.axes('axes', {x: [2, 13], y: [0, 8], box: [70, 34, 730, 372], xt: [2, 4, 6, 8, 10, 12], yt: [0, 2, 4, 6, 8], xl: 'poids (kg)', yl: 'pelage (cm)'});
+    P.forEach(a => st.put(a.id, {x: X(a.x1), y: Y(a.x2), s, o})); return {X, Y};
+  };
+  const learnedX = x2 => (-M.b - M.w2 * x2) / M.w1;
+  const segment = (X, Y, f, a = 0, b = 8) => `<line x1="${X(f(a))}" y1="${Y(a)}" x2="${X(f(b))}" y2="${Y(b)}"`;
+  const ring = (X, Y, P, judge) => P.map(a => `<circle cx="${X(a.x1)}" cy="${Y(a.x2)}" r="17" fill="none" stroke="${judge(a) === a.y ? GOOD : BAD}" stroke-width="3"/>`).join('');
+  // Rangées par poids : chats en haut, chiens en bas ; mêmes poids empilés.
+  const stripY = P => { const seen = {}, out = {}; P.forEach(a => { const k = a.y + ':' + a.x1; seen[k] = (seen[k] || 0) + 1; out[a.id] = (a.y ? 280 : 150) - (seen[k] - 1) * 30; }); return out; };
+  const weightStrip = (st, P) => {
+    const {X} = st.axes('axes', {x: [2, 13], y: [0, 1], box: [70, 40, 730, 340], xt: [2, 4, 6, 8, 10, 12], xl: 'poids (kg)'});
+    const ys = stripY(P); P.forEach(a => st.put(a.id, {x: X(a.x1), y: ys[a.id], s: 1.5}));
+    st.show('labels', `<text x="60" y="154" text-anchor="end" font-size="14" font-weight="700" fill="#85592b">chats</text><text x="60" y="284" text-anchor="end" font-size="14" font-weight="700" fill="#23497a">chiens</text>`, {below: true});
+    return {X, ys};
+  };
+  const cutLine = (X, t) => `<line x1="${X(t)}" x2="${X(t)}" y1="40" y2="330" stroke="${ACT}" stroke-width="3"/><text x="${X(t) - 6}" y="326" text-anchor="end" font-size="13" font-weight="700" fill="${ACT}">${fr(t, 2)} kg</text>`;
 
   const chapters = [
-    {title: 'Quelle question ?', minutes: 10, steps: [
-      {title: 'Écrire ou apprendre ?', prompt: 'Regardez : des règles écrites à la main, puis une règle apprise. Lancez la lecture ou avancez étape par étape.',
+    {title: 'Écrire ou apprendre', minutes: 15, goal: 'Une règle apprise vient des exemples ; on la juge sur des cas jamais vus.', stage: () => L.stage({w: W, h: H, animals: [...train, ...val], label: 'Animaux du fil rouge'}), steps: [
+      {title: 'Une règle écrite', prompt: 'Règle : « plus de 6 kg → chien ». Sur ces 24 animaux, combien d’erreurs ?',
         render(ctx) {
-          const c = window.MLF110Classroom.mount('rules', ctx.visual, {});
-          ctx.visual.addEventListener('classroom:step', ev => { if (ev.detail.last) { ctx.say('good', 'Programmer : on écrit la règle. Apprendre : le modèle la tire des exemples — puis on la vérifie sur des animaux jamais vus.'); ctx.unlock(); } });
-          ctx.onCleanup(() => c && c.cleanup());
-        }, hint: 'Allez jusqu’à la dernière étape'},
-      {title: 'Trier les problèmes', prompt: 'Pour chaque situation : que cherche-t-on ? Touchez le bon type.',
-        render(ctx) {
-          const items = [
-            ['Prédire le poids d’un animal à partir de son pelage', 'régression'],
-            ['Dire si un animal est un chat ou un chien', 'classification'],
-            ['Former des groupes de clients sans étiquette', 'non supervisé'],
-            ['Estimer le prix d’un appartement', 'régression']];
-          const goal = ctx.goal('Classez les 4 situations'); let ok = 0;
-          const box = L.el('div', 'lab-choices');
-          items.forEach(([txt, ans]) => {
-            const row = L.el('div', 'lab-choice'); row.style.cursor = 'default';
-            row.innerHTML = `<div style="margin-bottom:8px">${txt}</div>`;
-            const seg = L.el('div', 'lab-seg');
-            ['régression', 'classification', 'non supervisé'].forEach(t => {
-              const b = L.el('button', '', t); b.type = 'button';
-              b.addEventListener('click', () => {
-                if (t === ans) { row.classList.add('right'); seg.querySelectorAll('button').forEach(x => (x.disabled = true)); b.setAttribute('aria-pressed', 'true'); ok++;
-                  if (ok === items.length) goal.met('Régression : un nombre. Classification : une catégorie. Non supervisé : aucune cible fournie.'); }
-                else { b.disabled = true; ctx.say('bad', t === 'non supervisé' ? 'Ici, une réponse connue (la cible) existe dans les données.' : t === 'régression' ? 'La réponse attendue est une catégorie, pas un nombre.' : 'La réponse attendue est un nombre, pas une catégorie.'); }
-              });
-              seg.append(b);
-            });
-            row.append(seg); box.append(row);
-          });
-          ctx.visual.append(box); ctx.visual.style.padding = '14px';
+          const st = ctx.stage; st.clear(); st.only(train.map(a => a.id));
+          const pos = grid(st, sortedTrain);
+          st.show('code', codeCard(['if poids > 6:', '    return "chien"', 'return "chat"']));
+          ctx.predict([[0, '0'], [2, '2'], [4, '4'], [8, '8']], {truth: E[0].length,
+            reveal: () => st.show('marks', marks(pos, train, RULE[0])),
+            feedback: () => `${E[0].length} chats lourds sont pris pour des chiens.`});
         }},
-      {title: 'Où est la cible ?', prompt: 'On veut reconnaître l’espèce. Touchez la colonne qui est la <b>cible</b>.',
+      {title: 'Une condition de plus', prompt: 'On ajoute « et pelage < 5 ». Combien d’erreurs reste-t-il ?',
         render(ctx) {
-          const rows = train.slice(0, 5);
-          const cols = [['Poids (kg)', a => fr(a.x1, 1)], ['Pelage (cm)', a => fr(a.x2, 1)], ['Espèce', a => headSvg(a.kind, 26)]];
-          const t = L.el('div', 'table-wrap');
-          t.innerHTML = `<table class="widget-table" style="width:100%;border-collapse:collapse;text-align:center"><thead><tr>${cols.map((c, i) => `<th><button type="button" class="lab-choice" data-c="${i}" style="width:100%">${c[0]}</button></th>`).join('')}</tr></thead>
-            <tbody>${rows.map(a => `<tr>${cols.map(c => `<td style="padding:6px;border-top:1px solid #eee">${c[1](a)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-          ctx.visual.append(t);
-          t.addEventListener('click', ev => {
-            const b = ev.target.closest('[data-c]'); if (!b) return;
-            if (b.dataset.c === '2') { b.classList.add('right'); ctx.say('good', 'Oui : l’espèce est la <mark>cible</mark> y. Poids et pelage sont les <mark>variables</mark> x qui servent à la prédire.'); ctx.unlock(); }
-            else { b.classList.add('wrong'); ctx.say('bad', 'Cette colonne est une variable d’entrée : on la connaît pour un nouvel animal.'); }
-          });
-        }}
-    ]},
-    {title: 'Lire les données', minutes: 20, steps: [
-      {title: 'Un seul seuil', prompt: 'Règle : « chien si poids ≥ seuil ». Glissez le seuil pour faire le moins d’erreurs possible.',
-        render(ctx) {
-          const out = ctx.readout(), goal = ctx.goal('Atteignez le minimum d’erreurs');
-          weightStrip(ctx, {t: 4, onMove(t) {
-            const e = errRule(t, train); out([['Seuil', fr(t, 2) + ' kg'], ['Erreurs', `${e} / ${train.length}`]]);
-            if (e === minRuleErr) goal.met(`${e} erreurs : impossible de faire mieux avec le poids seul. Les deux espèces se chevauchent entre 6 et 8 kg.`);
-          }});
-        }, hint: 'Glissez la ligne bordeaux (ou flèches ← →)'},
-      {title: 'Une clinique déséquilibrée', prompt: 'Dans une clinique, 95 animaux sur 100 sont des chats. Un modèle répond toujours « chat ». Son taux de bonnes réponses ?',
-        render(ctx) {
-          const grid = L.el('div'); grid.style.cssText = 'display:grid;grid-template-columns:repeat(20,1fr);gap:2px;max-width:560px;margin:0 auto';
-          grid.innerHTML = Array.from({length: 100}, (_, i) => headSvg(i % 20 === 7 ? 'chien' : 'chat', 24)).join('');
-          ctx.visual.append(grid);
-          ctx.choices([
-            {text: '95 %', right: true, why: '95 % de bonnes réponses… et <mark>aucun chien</mark> reconnu. Avant toute métrique, lire les proportions de classes.'},
-            {text: '50 %', why: 'Il a raison pour chaque chat, soit 95 animaux sur 100.'},
-            {text: '5 %', why: 'C’est la part des chiens, qu’il rate tous.'}
-          ]);
+          const st = ctx.stage; st.clear('marks'); st.only(train.map(a => a.id));
+          const pos = grid(st, sortedTrain);
+          st.show('code', codeCard(['if poids > 6 and pelage < 5:', '    return "chien"', 'return "chat"']));
+          ctx.predict([[0, '0'], [1, '1'], [2, '2'], [4, '4']], {truth: E[1].length,
+            reveal: () => st.show('marks', marks(pos, train, RULE[1])),
+            feedback: () => `Il reste un chat de ${fr(fixedCat.x1, 1)} kg au poil court.`});
         }},
-      {title: 'Un animal surprenant', prompt: 'Un animal ne ressemble pas aux autres de son espèce. Touchez-le.',
+      {title: 'Une exception', prompt: 'Pour ce chat, on ajoute « si pelage < 2 et poids < 8 → chat ». Que se passe-t-il ?',
         render(ctx) {
-          const odd = train.reduce((best, a) => { const same = train.filter(b => b.y === a.y && b.id !== a.id); const d = Math.min(...same.map(b => Math.hypot(a.x1 - b.x1, a.x2 - b.x2))); return d > best.d ? {a, d} : best; }, {d: -1}).a;
-          let tries = 0;
-          K.scatter(ctx, {pool: train, state: {k: 0, rings: false}, onTap(a, api) {
-            if (a.id === odd.id) { api.set({marks: `<circle class="pick-ok" cx="${api.X(a.x1)}" cy="${api.Y(a.x2)}" r="14"/>`}); ctx.say('good', `Un ${word(a.y)} de ${fr(a.x1, 1)} kg au poil court. <mark>Atypique n’est pas faux</mark> : on vérifie la mesure avant de supprimer quoi que ce soit.`); ctx.unlock(); }
-            else { tries++; api.set({marks: `<circle class="pick-bad" cx="${api.X(a.x1)}" cy="${api.Y(a.x2)}" r="14"/>`}); ctx.say('bad', 'Celui-ci est entouré d’animaux de son espèce. Cherchez un animal isolé parmi l’autre espèce.');
-              if (tries >= 2) { api.set({marks: `<circle class="pick-ok" cx="${api.X(odd.x1)}" cy="${api.Y(odd.x2)}" r="14"/>`}); ctx.unlock(); } }
-          }});
-        }}
-    ]},
-    {title: 'Des références pour comparer', minutes: 20, steps: [
-      {title: 'Prédire sans rien savoir', prompt: 'Sans aucune variable, on prédit le <b>même poids</b> c pour tous. Quel c rend l’erreur quadratique moyenne la plus petite ?',
+          const st = ctx.stage; st.clear('marks'); st.only(train.map(a => a.id));
+          const pos = grid(st, sortedTrain);
+          st.show('code', codeCard(['if poids > 6 and pelage < 5:', '    if pelage < 2 and poids < 8:', '        return "chat"', '    return "chien"', 'return "chat"']));
+          ctx.predict([['zero', 'Plus aucune erreur'], ['other', 'Un autre animal devient faux'], ['more', 'Beaucoup plus d’erreurs']], {truth: 'other',
+            reveal: () => st.show('marks', marks(pos, train, RULE[2])),
+            feedback: () => `Le chat est corrigé… et un chien de ${fr(brokenDog.x1, 1)} kg au poil court devient faux. Chaque exception en appelle une autre.`});
+        }},
+      {title: 'Apprendre des exemples', prompt: 'On donne les 24 exemples étiquetés à un algorithme. Quelle frontière va-t-il trouver ?',
         render(ctx) {
-          const f = K.frame(ctx, {x: [0, 25], y: [0, 13], w: 484, h: 260, xticks: 5, yticks: 2, xfmt: () => '', yfmt: v => v, xl: 'les 24 animaux d’apprentissage', yl: 'Poids (kg)', layers: ['res', 'pts', 'c'], noclip: ['pts', 'c']});
-          const sorted = [...train].sort((a, b) => a.x1 - b.x1);
-          f.layer('pts').innerHTML = sorted.map((a, i) => `<g transform="translate(${f.X(i + .8)},${f.Y(a.x1)}) scale(.8)">${A.head(a.kind)}</g>`).join('');
-          const out = ctx.readout(), goal = ctx.goal('Trouvez le c qui minimise l’erreur');
-          const draw = c => {
-            f.layer('res').innerHTML = sorted.map((a, i) => `<line x1="${f.X(i + .8)}" x2="${f.X(i + .8)}" y1="${f.Y(a.x1)}" y2="${f.Y(c)}" stroke="#c24a26" stroke-width="2" opacity=".6"/>`).join('');
-            f.layer('c').innerHTML = `<line class="thr" x1="${f.X(0)}" x2="${f.X(25)}" y1="${f.Y(c)}" y2="${f.Y(c)}"/>`;
-            const mse = mean(train.map(a => (a.x1 - c) ** 2));
-            out([['c', fr(c, 1) + ' kg'], ['MSE', fr(mse, 2) + ' kg²']]);
-            if (Math.abs(c - Math.round(wMean * 10) / 10) < 1e-9) goal.met(`c = ${fr(c, 1)} kg ≈ la <mark>moyenne</mark> des poids (${fr(wMean, 2)}). La moyenne minimise l’erreur quadratique : c’est la baseline de régression.`);
-          };
-          ctx.slider({label: 'c', values: Array.from({length: 91}, (_, i) => +(3 + i * .1).toFixed(1)), value: 4, format: v => fr(v, 1), onInput: draw});
+          const st = ctx.stage; st.clear('marks', 'code'); st.only(train.map(a => a.id));
+          const {X, Y} = scatter(st, train);
+          const dash = (l, t, x, y) => `${l} stroke="${MUTED}" stroke-width="2" stroke-dasharray="6 6"/><text x="${x}" y="${y}" font-size="16" font-weight="700" fill="${MUTED}">${t}</text>`;
+          st.show('cands', dash(`<line x1="${X(2)}" y1="${Y(4)}" x2="${X(13)}" y2="${Y(4)}"`, 'A', X(12.5), Y(4) - 8) +
+            dash(segment(X, Y, learnedX), 'B', X(learnedX(7.6)) + 8, Y(7.6)) + dash(segment(X, Y, () => 10.5), 'C', X(10.5) + 8, Y(7.6)));
+          ctx.predict([['A', 'A : selon le pelage'], ['B', 'B : surtout le poids, un peu le pelage'], ['C', 'C : seulement les très lourds']], {truth: 'B',
+            reveal: () => { st.clear('cands'); st.show('learned', `${segment(X, Y, learnedX)} stroke="${ACT}" stroke-width="3.5" stroke-dasharray="10 6"/>` + EL.map(a => `<circle cx="${X(a.x1)}" cy="${Y(a.x2)}" r="16" fill="none" stroke="${BAD}" stroke-width="3"/>`).join('')); },
+            feedback: () => `L’algorithme a trouvé B tout seul. ${EL.length} erreurs sur 24 : appris, pas parfait.`});
         },
-        details: String.raw`\[\mathrm{MSE}(c)=\frac1n\sum_{i=1}^n (y_i-c)^2,\qquad \frac{d}{dc}\mathrm{MSE}=0\iff c=\bar y\]`},
-      {title: 'La baseline de classification', prompt: 'Apprentissage : 12 chats et 12 chiens. On prédit toujours la classe <b>la plus fréquente</b>. Taux de bonnes réponses attendu ?',
+        details: '<p>Ici l’algorithme est une régression logistique (CM 5) : <code>modele = LogisticRegression().fit(X, y)</code>. Frontière : 1,37·poids − 0,22·pelage = 8,75.</p>'},
+      {title: 'Des animaux jamais vus', prompt: '8 nouveaux animaux arrivent. Combien la frontière apprise en classe-t-elle correctement ?',
         render(ctx) {
-          ctx.visual.innerHTML = `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:2px;padding:12px">${train.map(a => headSvg(a.kind, 30)).join('')}</div>`;
-          ctx.choices([
-            {text: '50 %', right: true, why: 'Classes équilibrées : la baseline « classe majoritaire » vaut 50 %. Un modèle doit faire mieux pour être utile.'},
-            {text: '100 %', why: 'Elle se trompe sur toute l’autre classe, soit la moitié des animaux.'},
-            {text: '0 %', why: 'Elle a raison pour tous les animaux de la classe choisie.'}
-          ]);
+          const st = ctx.stage; st.clear('cands', 'code', 'marks');
+          const {X, Y} = scatter(st, train, 1.25, .2);
+          st.show('learned', `${segment(X, Y, learnedX)} stroke="${ACT}" stroke-width="3.5" stroke-dasharray="10 6"/>`);
+          val.forEach(a => st.put(a.id, {x: X(a.x1), y: Y(a.x2), s: 1.6}));
+          ctx.estimate({label: 'bonnes réponses', values: [0, 1, 2, 3, 4, 5, 6, 7, 8], value: 4, format: v => `${v} / 8`, truth: val.length - EV.length, close: (v, t) => Math.abs(v - t) <= 1,
+            reveal: () => st.show('marks', ring(X, Y, val, learned)),
+            feedback: () => 'Programmer : on écrit la règle. Apprendre : on la tire des exemples, puis on la vérifie sur des cas jamais vus.'});
         }},
-      {title: 'Battre la baseline', prompt: 'Votre règle de poids, appliquée à <b>8 nouveaux animaux</b> (validation). Fait-elle mieux que 50 % ?',
+      {title: 'Trois questions, mêmes animaux', noStage: true, prompt: 'Pour chaque question, touchez le type de tâche.',
         render(ctx) {
-          const t = cuts.find(c => errRule(c, train) === minRuleErr), e = errRule(t, val);
-          weightStrip(ctx, {pool: val, t});
-          ctx.choices([
-            {text: `Oui : ${val.length - e} / ${val.length}`, right: true, why: `${val.length - e} bonnes réponses sur ${val.length} (${fr(100 * (val.length - e) / val.length, 1)} %) contre 50 % pour la baseline. Jugé sur des animaux <mark>non utilisés</mark> pour régler le seuil.`},
-            {text: 'Non : 4 / 8', why: 'Comptez les animaux du bon côté du seuil : la règle fait mieux.'},
-            {text: 'Impossible à dire', why: 'On peut le dire : ces 8 animaux n’ont pas servi à choisir le seuil.'}
-          ]);
+          const items = [['Prédire l’espèce d’un nouvel animal', 'classification'], ['Prédire le poids à partir du pelage', 'régression'], ['Former des groupes sans connaître l’espèce', 'non supervisé']];
+          const goal = ctx.goal('Classez les 3 questions'); let ok = 0; const box = L.el('div', 'lab-choices lab-sort'), rightBtns = [];
+          items.forEach(([t, ans]) => {
+            const row = L.el('div', 'lab-choice'), seg = L.el('div', 'lab-seg');
+            row.innerHTML = `<div class="lab-sort-q">${t}</div>`;
+            const settle = b => { row.classList.add('right'); seg.querySelectorAll('button').forEach(x => (x.disabled = true)); b.setAttribute('aria-pressed', 'true'); };
+            ['classification', 'régression', 'non supervisé'].forEach(k => { const b = L.el('button', '', k); b.type = 'button';
+              if (k === ans) rightBtns.push(b);
+              if (ctx.solved && k === ans) setTimeout(() => settle(b));
+              b.addEventListener('click', () => {
+                if (k !== ans) { b.disabled = true; return ctx.say('bad', k === 'non supervisé' ? 'Ici la réponse attendue figure dans les exemples.' : 'Regardez la réponse attendue : une catégorie ou un nombre ?'); }
+                settle(b); if (++ok === 3) goal.met('Une catégorie, un nombre, aucune cible : trois tâches pour les mêmes données.');
+              });
+              seg.append(b); });
+            row.append(seg); box.append(row); });
+          ctx.visual.append(box);
+          ctx.onSolve(() => rightBtns.forEach(b => !b.disabled && b.click()));
         }}
     ]},
-    {title: 'Garder des données de côté', minutes: 25, steps: [
-      {title: 'Apprendre par cœur', prompt: 'Un modèle retient chaque animal d’apprentissage et répond par l’espèce du plus proche. Son erreur <b>sur ces mêmes animaux</b> ?',
+    {title: 'Lire les données', minutes: 20, goal: 'Avant tout modèle : regarder le chevauchement, les proportions de classes, les cas atypiques.', stage: () => L.stage({w: W, h: H, animals: train, label: 'Poids des animaux'}), steps: [
+      {title: 'Où se mélangent-ils ?', prompt: 'Les animaux se rangent selon leur poids. Entre quels poids chats et chiens se mélangent-ils ?',
         render(ctx) {
-          K.scatter(ctx, {pool: train, state: {k: 0, rings: false}});
-          ctx.choices([
-            {text: '0 erreur', right: true, why: 'Chaque animal est son propre plus proche voisin : 0 erreur, par construction. Ce chiffre ne dit rien sur un nouvel animal.'},
-            {text: 'Environ 2 erreurs, comme la règle du poids', why: 'Ici chaque animal se retrouve lui-même à distance 0.'},
-            {text: 'Impossible à calculer', why: 'On peut : chaque animal est à distance nulle de lui-même.'}
-          ]);
+          const st = ctx.stage; st.clear(); const {X} = weightStrip(st, train);
+          ctx.predict([['a', '3 à 5 kg'], ['b', `${fr(dogMin, 1)} à ${fr(catMax, 1)} kg`], ['c', '9 à 11 kg'], ['d', 'Nulle part']], {truth: 'b',
+            reveal: () => st.show('zone', `<rect x="${X(dogMin) - 16}" y="60" width="${X(catMax) - X(dogMin) + 32}" height="250" rx="10" fill="#ffe58f" opacity=".5"/><text x="${(X(dogMin) + X(catMax)) / 2}" y="52" text-anchor="middle" font-size="13" font-weight="700" fill="${ACT}">mélange</text>`, {below: true}),
+            feedback: () => `Chien le plus léger : ${fr(dogMin, 1)} kg ; chat le plus lourd : ${fr(catMax, 1)} kg. Le poids seul ne suffira pas tout à fait.`});
         }},
-      {title: 'Évaluer où ?', prompt: 'Même modèle. Basculez entre apprentissage et validation : quelle erreur annoncer ?',
+      {title: 'Une seule question', prompt: '« Chien si poids ≥ seuil. » Avec le meilleur seuil possible, combien d’erreurs sur les 24 ?',
         render(ctx) {
-          const out = ctx.readout();
-          const err = pool => pool.filter(a => C.decide(C.score(a, 1, 'kg', train)) !== a.y);
-          const sp = K.scatter(ctx, {pool: [...train, ...val], state: {k: 0, rings: false}});
-          const show = which => {
-            const pool = which === 'val' ? val : train, bad = err(pool);
-            sp.set({marks: pool.map(a => `<circle class="${bad.includes(a) ? 'pick-bad' : 'nb-ring'}" cx="${sp.X(a.x1)}" cy="${sp.Y(a.x2)}" r="14" ${bad.includes(a) ? '' : 'opacity=".35"'}/>`).join('')});
-            out([['Évalué sur', which === 'val' ? 'validation (8)' : 'apprentissage (24)'], ['Erreurs', `${bad.length} / ${pool.length}`]]);
-          };
-          ctx.seg([['tr', 'apprentissage'], ['val', 'validation']], {value: 'tr', onChange: show}); show('tr');
-          const ev = err(val).length;
-          ctx.choices([
-            {text: `Celle de la validation : ${ev} / ${val.length}`, right: true, why: 'On annonce l’erreur sur des animaux que le modèle <mark>n’a jamais vus</mark>. L’apprentissage donne une vision trop optimiste.'},
-            {text: 'Celle de l’apprentissage : 0', why: 'Ces animaux ont été mémorisés : 0 erreur n’apprend rien sur un nouvel animal.'}
-          ]);
+          const st = ctx.stage; st.clear('marks'); const {X, ys} = weightStrip(st, train);
+          ctx.estimate({label: 'erreurs', values: [0, 1, 2, 3, 4, 5, 6], value: 0, format: String, truth: minCut,
+            reveal: () => st.show('marks', cutLine(X, bestCut) + train.filter(a => (a.x1 >= bestCut ? 1 : 0) !== a.y).map(a => `<circle cx="${X(a.x1)}" cy="${ys[a.id]}" r="18" fill="none" stroke="${BAD}" stroke-width="3"/>`).join('')),
+            feedback: () => `Au mieux ${minCut} erreurs, avec un seuil vers ${fr(bestCut, 1)} kg : les animaux de la zone de mélange.`});
         }},
-      {title: 'Modèle, perte, métrique', prompt: 'Le modèle est ajusté en minimisant la MSE. Le vétérinaire veut savoir « de combien de kg on se trompe en moyenne ». Que lui rapporter ?',
+      {title: 'Une clinique déséquilibrée', prompt: '95 chats, 5 chiens. Un modèle répond toujours « chat ». Quel taux de bonnes réponses ?',
         render(ctx) {
-          ctx.visual.innerHTML = `<div style="display:grid;gap:8px;padding:10px">
-            <div><b>Modèle</b> : la règle qui prédit.</div><div><b>Perte</b> : ce que l’algorithme minimise pendant l’apprentissage.</div><div><b>Métrique</b> : ce que l’on rapporte, choisi pour la question posée.</div></div>`;
-          ctx.choices([
-            {text: 'L’erreur absolue moyenne (MAE), en kg, sur la validation', right: true, why: 'La perte sert à apprendre ; la <mark>métrique</mark> répond à la question du client, dans son unité, sur des données réservées.'},
-            {text: 'La MSE d’apprentissage, puisque c’est elle qu’on minimise', why: 'Elle est en kg² et mesurée sur des données déjà vues.'},
-            {text: 'Le nombre d’itérations de l’algorithme', why: 'C’est un détail de calcul, pas une mesure de qualité.'}
-          ]);
+          const st = ctx.stage; st.clear(); st.hide();
+          const cx = i => 85 + (i % 20) * 31, cy = i => 90 + Math.floor(i / 20) * 58, dog = i => i % 20 === 7;
+          let h = ''; for (let i = 0; i < 100; i++) h += `<g transform="translate(${cx(i)},${cy(i)}) scale(1.15)">${A.head(dog(i) ? 'chien' : 'chat')}</g>`;
+          st.show('clinic', h);
+          ctx.estimate({label: 'bonnes réponses', values: Array.from({length: 21}, (_, i) => i * 5), value: 50, format: v => v + ' %', truth: 95, close: (v, t) => Math.abs(v - t) <= 5,
+            reveal: () => { let m = ''; for (let i = 0; i < 100; i++) if (dog(i)) m += `<circle cx="${cx(i)}" cy="${cy(i)}" r="16" fill="none" stroke="${BAD}" stroke-width="3"/>`; st.show('marks', m); },
+            feedback: () => 'Et <mark>aucun</mark> des 5 chiens n’est reconnu. Avant toute métrique : lire les proportions de classes.'});
+        }},
+      {title: 'Un animal surprenant', prompt: `Ce chat de ${fr(fixedCat.x1, 1)} kg a un poil très court. Que fait-on de lui ?`,
+        render(ctx) {
+          const st = ctx.stage; st.clear(); st.only(train.map(a => a.id));
+          const {X, Y} = scatter(st, train); train.forEach(a => a !== fixedCat && st.dim([a.id], .35)); st.put(fixedCat.id, {x: X(fixedCat.x1), y: Y(fixedCat.x2), s: 2});
+          st.show('marks', `<circle cx="${X(fixedCat.x1)}" cy="${Y(fixedCat.x2)}" r="26" fill="none" stroke="${ACT}" stroke-width="3"/>`);
+          ctx.predict([['del', 'On le supprime : il gêne'], ['check', 'On vérifie la mesure ; si elle est juste, on le garde'], ['dog', 'On le reclasse en chien']], {truth: 'check',
+            feedback: () => 'Atypique n’est pas faux : un vrai chat lourd au poil court existe, et le modèle devra le rencontrer.'});
         }}
     ]},
-    {title: 'Prédire puis vérifier', minutes: 15, steps: [
-      {title: 'Votre protocole', prompt: 'Touchez les étapes <b>dans l’ordre</b>.',
+    {title: 'Des références', minutes: 20, goal: 'Un modèle n’est utile que s’il bat une référence simple : la moyenne, la classe majoritaire.', stage: () => L.stage({w: W, h: H, animals: [...train, ...val], label: 'Poids des animaux'}), steps: [
+      {title: 'Une seule valeur pour tous', prompt: 'On prédit le même poids pour tous les animaux. Quelle valeur rend l’erreur quadratique la plus petite ?',
         render(ctx) {
-          const steps = ['Formuler la tâche et la cible', 'Lire les données (classes, valeurs atypiques)', 'Calculer une baseline', 'Évaluer le modèle sur des données réservées'];
-          const order = [3, 1, 0, 2]; let next = 0; const goal = ctx.goal('Remettez les 4 étapes dans l’ordre');
-          K.cards(ctx, order.map(i => steps[i]), (j, b) => {
-            const i = order[j];
-            if (i === next) { b.classList.add('right'); b.disabled = true; b.innerHTML = `<b>${next + 1}.</b> ${steps[i]}`; if (++next === 4) goal.met('Une tâche claire, des données lues, une référence, une évaluation honnête : la base de toute la suite.'); }
-            else { b.classList.add('wrong'); setTimeout(() => b.classList.remove('wrong'), 500); ctx.say('bad', 'Quelle étape doit venir avant celle-ci ?'); }
+          const st = ctx.stage; st.clear(); st.only(train.map(a => a.id));
+          const {X, Y} = st.axes('axes', {x: [0, 25], y: [0, 13], box: [70, 30, 730, 372], yt: [0, 2, 4, 6, 8, 10, 12], yl: 'poids (kg)'});
+          const sorted = [...train].sort((a, b) => a.x1 - b.x1); sorted.forEach((a, i) => st.put(a.id, {x: X(i + .8), y: Y(a.x1), s: 1.3}));
+          const lineC = (c, col, lab) => `<line x1="${X(0)}" x2="${X(25)}" y1="${Y(c)}" y2="${Y(c)}" stroke="${col}" stroke-width="3"/><text x="${X(25)}" y="${Y(c) - 8}" text-anchor="end" font-size="13" font-weight="700" fill="${col}">${lab}</text>`;
+          const start = 9;
+          ctx.estimate({label: 'c', values: Array.from({length: 91}, (_, i) => +(3 + i * .1).toFixed(1)), value: start, format: v => fr(v, 1) + ' kg', truth: +wMean.toFixed(1), close: (v, t) => Math.abs(v - t) <= .3,
+            onInput: c => st.show('guess', lineC(c, MUTED, 'votre valeur')),
+            reveal: () => st.show('marks', sorted.map((a, i) => `<line x1="${X(i + .8)}" x2="${X(i + .8)}" y1="${Y(a.x1)}" y2="${Y(wMean)}" stroke="${BAD}" stroke-width="2" opacity=".55"/>`).join('') + lineC(wMean, ACT, 'la moyenne')),
+            feedback: (v, ok, shown) => (shown ? `MSE : ${fr(mse(wMean), 2)} avec la moyenne (${fr(mse(9), 2)} avec 9 kg).` : `MSE : ${fr(mse(v), 2)} avec votre valeur, ${fr(mse(wMean), 2)} avec la moyenne.`) + ` La moyenne est la meilleure constante : c’est la <mark>référence</mark> à battre.`});
+          if (!ctx.solved) st.show('guess', lineC(start, MUTED, 'votre valeur'));
+        },
+        details: String.raw`\[\mathrm{MSE}(c)=\frac1n\sum_i (y_i-c)^2\ \text{ est minimale pour } c=\bar y\]`},
+      {title: 'La référence des classes', prompt: '12 chats, 12 chiens. On répond toujours la classe la plus fréquente. Quel taux de bonnes réponses ?',
+        render(ctx) {
+          const st = ctx.stage; st.clear(); st.only(train.map(a => a.id));
+          const pos = grid(st, sortedTrain, {s: 2});
+          ctx.estimate({label: 'bonnes réponses', values: Array.from({length: 11}, (_, i) => i * 10), value: 80, format: v => v + ' %', truth: 50,
+            reveal: () => st.show('marks', marks(pos, train, () => 0)),
+            feedback: () => 'Classes équilibrées : toujours « chat » donne 50 %. Tout modèle utile doit faire mieux.'});
+        }},
+      {title: 'Battre la référence', prompt: '« Chien si poids ≥ seuil » fera-t-elle mieux que 50 % sur 8 animaux nouveaux ?',
+        render(ctx) {
+          const st = ctx.stage; st.clear(); st.only(val.map(a => a.id)); const {X, ys} = weightStrip(st, val);
+          const e = cutErr(bestCut, val);
+          ctx.predict([['yes', 'Oui, nettement'], ['no', 'Non, pas mieux que 50 %'], ['?', 'Impossible à savoir']], {truth: 'yes',
+            reveal: () => st.show('marks', cutLine(X, bestCut) + val.map(a => `<circle cx="${X(a.x1)}" cy="${ys[a.id]}" r="18" fill="none" stroke="${(a.x1 >= bestCut ? 1 : 0) === a.y ? GOOD : BAD}" stroke-width="3"/>`).join('')),
+            feedback: () => `${val.length - e} bonnes réponses sur ${val.length} : mieux que la référence, sur des animaux qui n’ont pas servi à choisir le seuil.`});
+        }}
+    ]},
+    {title: 'Garder des données de côté', minutes: 20, goal: 'Apprentissage pour ajuster, validation pour choisir, test pour annoncer — une seule fois.', stage: () => L.stage({w: W, h: H, animals: all, label: 'Les 40 animaux'}), steps: [
+      {title: 'Apprendre par cœur', prompt: 'Un modèle retient les 24 animaux et répond l’espèce du plus proche. Combien d’erreurs sur ces mêmes 24 ?',
+        render(ctx) {
+          const st = ctx.stage; st.clear(); st.only(train.map(a => a.id)); const {X, Y} = scatter(st, train);
+          ctx.estimate({label: 'erreurs', values: [0, 1, 2, 3, 4, 5, 6], value: 3, format: String, truth: nnTrainErr,
+            reveal: () => st.show('marks', ring(X, Y, train, nn1)),
+            feedback: () => 'Chaque animal est son propre plus proche voisin : 0 erreur, par construction. Ce chiffre ne dit rien d’un nouvel animal.'});
+        }},
+      {title: 'Le même modèle, ailleurs', prompt: 'Même modèle, sur les 8 animaux de validation. Combien d’erreurs maintenant ?',
+        render(ctx) {
+          const st = ctx.stage; st.clear(); st.only([...train, ...val].map(a => a.id)); const {X, Y} = scatter(st, train, 1.25, .3);
+          val.forEach(a => st.put(a.id, {x: X(a.x1), y: Y(a.x2), s: 1.6}));
+          ctx.estimate({label: 'erreurs', values: [0, 1, 2, 3, 4, 5, 6, 7, 8], value: 0, format: v => `${v} / 8`, truth: nnValErr,
+            reveal: () => st.show('marks', ring(X, Y, val, nn1)),
+            feedback: () => `${nnValErr} erreur sur 8 : c’est celle-là, sur des animaux jamais vus, que l’on annonce.`});
+        }},
+      {title: 'Trois tas', prompt: 'On essaie 20 règles et on garde la meilleure sur le test. Son score de test est-il fiable ?',
+        render(ctx) {
+          const st = ctx.stage; st.clear(); st.only(all.map(a => a.id));
+          const piles = [['apprentissage', train, 160, 6, 'ajuster'], ['validation', val, 440, 3, 'choisir'], ['test', test, 630, 3, 'annoncer, une fois']];
+          let lab = '';
+          piles.forEach(([n, P, cx, cols, verb]) => {
+            P.forEach((a, i) => st.put(a.id, {x: cx + ((i % cols) - (cols - 1) / 2) * 40, y: 150 + Math.floor(i / cols) * 44, s: 1.4}));
+            lab += `<text x="${cx}" y="100" text-anchor="middle" font-size="15" font-weight="700" fill="${n === 'test' ? ACT : '#1d2433'}">${n} · ${P.length}</text><text x="${cx}" y="345" text-anchor="middle" font-size="14" fill="${MUTED}">${verb}</text>`;
           });
-          ctx.visual.style.padding = '14px';
+          lab += `<rect x="572" y="118" width="116" height="140" rx="12" fill="none" stroke="${ACT}" stroke-width="2" stroke-dasharray="6 5"/><text x="630" y="300" text-anchor="middle" font-size="28">🔒</text>`;
+          st.show('labels', lab, {below: true});
+          ctx.predict([['yes', 'Oui, c’est le test'], ['no', 'Non : trop optimiste'], ['eq', 'Ni plus ni moins']], {truth: 'no',
+            feedback: () => 'Choisir sur le test en fait une validation : on garde la règle chanceuse. Le test reste fermé jusqu’à l’annonce finale.'});
         }},
-      {title: 'Ce que vous avez fait', free: true, prompt: 'En une séance :',
+      {title: 'Ce que l’on annonce', prompt: 'Le modèle a minimisé la MSE. Le vétérinaire demande : « de combien de kg vous trompez-vous ? » Que lui donner ?',
         render(ctx) {
-          ctx.visual.innerHTML = `<ul class="lab-recap"><li>distingué régression, classification et non supervisé ;</li><li>trouvé la cible et les variables ;</li>
-            <li>construit une règle à un seuil et vu le chevauchement ;</li><li>repéré le piège des classes déséquilibrées ;</li>
-            <li>trouvé que la moyenne est la meilleure constante (MSE) ;</li><li>compris pourquoi on évalue sur des données réservées.</li></ul>
-            <p style="margin:6px 4px">Suite : <a href="index.html#td/td01">TD 1</a> · <a href="cm02-lab.html">CM 2 interactif</a> · <a href="index.html#cm01">version texte</a></p>`;
-          ctx.say('good', 'Prochaine étape : une droite au lieu d’une constante.');
+          const st = ctx.stage; st.clear(); st.hide();
+          st.show('labels', `<g transform="translate(250,210) scale(4)">${A.head('chien')}</g><g transform="translate(330,90)"><rect width="300" height="64" rx="18" fill="#fff" stroke="#e9e3d8" stroke-width="2"/><path d="M30 64 L18 92 L60 64Z" fill="#fff" stroke="#e9e3d8" stroke-width="2"/><rect x="31" y="60" width="28" height="6" fill="#fff"/><text x="150" y="40" text-anchor="middle" font-size="19" fill="#1d2433">« de combien de kg ? »</text></g>`);
+          ctx.predict([['mae', 'L’erreur absolue moyenne (kg), sur la validation'], ['mse', 'La MSE d’apprentissage (kg²)'], ['it', 'Le nombre d’itérations']], {truth: 'mae',
+            reveal: () => st.show('marks', `<text x="480" y="260" text-anchor="middle" font-size="26" font-weight="700" fill="${ACT}">perte  ≠  métrique</text><text x="480" y="296" text-anchor="middle" font-size="15" fill="${MUTED}">ce que l’algorithme minimise · ce que l’on rapporte</text>`),
+            feedback: () => 'Une métrique dans l’unité de la question, mesurée sur des données réservées.'});
+        }}
+    ]},
+    {title: 'Vers le TD 1', minutes: 15, goal: 'Le même raisonnement sur un nouveau problème : une boutique en ligne.', steps: [
+      {title: 'Un nouveau problème', prompt: 'Une boutique veut prévoir les commandes en retard (> 48 h). Sur 100, 20 l’étaient. Que vaut la référence ?',
+        render(ctx) {
+          ctx.visual.innerHTML = `<div class="lab-orders">${Array.from({length: 100}, (_, i) => `<i class="${i % 5 === 2 ? 'late' : ''}"></i>`).join('')}</div><p class="lab-legend"><i class="late"></i> en retard &nbsp; <i></i> à l’heure</p>`;
+          ctx.predict([['80', '80 % : toujours « à l’heure »'], ['20', '20 %'], ['50', '50 %']], {truth: '80',
+            reveal: () => ctx.visual.querySelector('.lab-orders').classList.add('revealed'),
+            feedback: () => 'Comme à la clinique : 80 % sans rien apprendre, et aucun retard détecté. Vous reprenez ce problème au TD 1.'});
+        }},
+      {title: 'Ce que vous avez fait', free: true, recapOpen: true, prompt: 'En une séance :',
+        render(ctx) {
+          ctx.visual.innerHTML = `<ul class="lab-recap"><li>des règles écrites qui s’empilent, puis une règle apprise ;</li><li>un chevauchement et un déséquilibre, lus sur les données ;</li><li>deux références : la moyenne, la classe majoritaire ;</li><li>une évaluation sur des données réservées ;</li><li>perte ≠ métrique.</li></ul>`;
+          ctx.extra.innerHTML = '<p class="lab-next"><a class="lab-btn" href="index.html#td/td01">Ouvrir le TD 1 →</a> <a class="lab-link" href="index.html#cm01">Notes du cours</a></p>';
+          ctx.say('good', 'Le TD 1 reprend la boutique en ligne là où vous l’avez laissée.');
         }}
     ]}
   ];
 
-  document.addEventListener('DOMContentLoaded', () => L.run(document.getElementById('lab'), {code: 'MLF110 · CM 01', title: 'Problèmes, données et baselines', home: 'index.html#cm01', chapters, onFinish: () => (location.href = 'cm02-lab.html')}));
+  document.addEventListener('DOMContentLoaded', () => L.run(document.getElementById('lab'), {code: 'MLF110 · CM 01', title: 'Apprentissage supervisé et non supervisé : données et références', cover: true,
+    date: window.MLF110Schedule ? window.MLF110Schedule.label(window.MLF110Schedule.cmDates().cm01) : '',
+    lead: 'Quarante chats et chiens, deux mesures : le poids et la longueur du pelage. Cinq parties, puis le TD 1.',
+    coverAfter: '<p class="lab-next"><a class="lab-link" href="index.html#cm01">Notes du cours</a> <a class="lab-link" href="index.html#td/td01">TD 1</a></p>', home: 'index.html#cm01', chapters, onFinish: () => (location.href = 'index.html#td/td01')}));
 })();

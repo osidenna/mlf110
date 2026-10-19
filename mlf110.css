@@ -189,3 +189,15 @@ body.is-presenting{overflow:hidden}.ml-presentation{position:fixed;inset:0;z-ind
  .minimal-home .lesson-header h1{font-size:30px}.minimal-home .course-row{gap:12px;grid-template-columns:24px minmax(0,1fr) auto}.minimal-home .course-row h3{font-size:19px}.minimal-home .course-row.is-soon h3{font-size:17px}.minimal-home .course-row .row-links{gap:18px}.soon-badge{font-size:10px;padding:2px 7px}.compact-course-nav .lesson-link{font-size:13px}.compact-lesson .lesson-header h1,.td-content .lesson-header h1{font-size:29px}.compact-lesson .lesson-slide h2{font-size:23px}.section-idea{font-size:17px;line-height:1.65}.section-details-body{padding-left:12px}.section-details-body .ml-block{font-size:15px}.compact-td-index .td-row strong{font-size:18px}.compact-td-index .td-row.is-soon strong{font-size:16px}.td-content .td-ex-head h2{font-size:22px}.td-content .td-ex-body{font-size:16px}.td-content .td-ex-body table{font-size:12px}.td-content .td-ex-body td,.td-content .td-ex-body th{padding:8px}.td-ex-tools{gap:8px}.td-status-select{font-size:10px}.td-extra-exercise>summary{display:block}.td-extra-exercise>summary span{display:block;margin-top:3px}.compact-soon h1{font-size:27px}
 }
 @media print{.section-details-body{border:0;padding:0}.td-ex-tools,.td-outline,.td-support,.td-status-select{display:none!important}.td-extra>summary{font-size:10pt}.td-extra{margin:10pt 0}.ml-print-root .td-extra{display:block}.ml-print-root .td-extra-exercise{display:block}.td-oral-panel>summary{font-size:12pt}}
+
+/* Système visuel unique (docs/DESIGN.md) : papier, encre, une seule couleur d'action (bordeaux) — comme les séances. */
+:root{--paper:#fffdf9;--paper-2:#faf6ef;--surface:#f7f2ea;--card:#fff;--line:#e9e3d8;--line-strong:#d9d0c2;--muted:#6b6f7a;
+  --ml-green:#7b1e2e;--ml-purple:#7b1e2e;--blue:#7b1e2e;--blue-soft:#f5e6e8;--focus:#7b1e2e;--orange:#2f62a3;--orange-soft:#f3f7fd}
+body,.ml-presentation,.presentation-canvas,.presentation-chrome{background:var(--paper)}
+.primary-button{border-bottom-color:#5f1622}.primary-button:hover{background:#5f1622}
+.callout{background:var(--paper-2)}
+.row-links .row-primary{color:#7b1e2e;font-weight:700}
+.td-bridge{background:#fff7d6;border-left:3px solid #7b1e2e;border-radius:0 8px 8px 0;padding:12px 16px;font-size:15px}
+.lesson-slide.is-extra{background:var(--paper-2);border-radius:12px;padding-left:18px;padding-right:18px}
+.lesson-slide.is-extra .slide-label span{color:#7b1e2e}
+.lesson-plan li small{color:var(--muted)}

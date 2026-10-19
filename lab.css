@@ -197,3 +197,57 @@ body.presenting .lab-visual > svg { max-height: 58vh; }
 .lab-visual .classroom-code-line{display:block;white-space:pre}.lab-visual .classroom-code-line.is-active{background:var(--marker)}
 .lab-visual .classroom-line-number{display:inline-block;width:24px;color:var(--muted)}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* Plateau persistant et estimations. */
+.lab-visual.has-stage > svg.lab-stage { width: 100%; height: auto; max-height: min(50vh, 520px); display: block; margin: 0 auto; }
+.lab-estimate { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+.lab-estimate .lab-slider { flex: 1; }
+.lab-predict .lab-choice.right { border-color: var(--good); }
+
+/* CM 1 · tri des tâches, commandes du TD, liens de fin */
+.lab-sort .lab-choice { cursor: default; display: grid; gap: 8px; }
+.lab-sort .lab-seg { flex-wrap: wrap; }
+.lab-orders { display: grid; grid-template-columns: repeat(20, 1fr); gap: 4px; max-width: 620px; margin: 8px auto; }
+.lab-orders i, .lab-legend i { display: block; aspect-ratio: 1; border-radius: 4px; background: var(--line, #e9e3d8); transition: background .45s ease, transform .45s ease; }
+.lab-orders i.late, .lab-legend i.late { background: #c24a26; }
+.lab-orders.revealed i:not(.late) { background: #cfe5d6; }
+.lab-orders.revealed i.late { transform: scale(.8); }
+.lab-legend { text-align: center; color: var(--muted, #6b6f7a); margin: 6px 0 0; font-size: 14px; }
+.lab-legend i { display: inline-block; width: 12px; vertical-align: -1px; }
+.lab-next { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin: 14px 0 0; }
+.lab-next .lab-btn { text-decoration: none; display: inline-block; }
+.lab-link { color: var(--act, #7b1e2e); }
+/* Prédictions courtes (nombres) : sur une ligne. */
+.lab-predict { grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
+.lab-predict .lab-choice { text-align: center; }
+
+/* Structure visible (comme SID34) : sur-titre « Partie n / N · … · étape k / m », couverture, diapos-titres. */
+.lab-eyebrow { font: 700 11px/1.4 var(--sans, Roboto, sans-serif); letter-spacing: .11em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.lab-screen[data-kind="cover"] .lab-eyebrow, .lab-screen[data-kind="part"] .lab-eyebrow { color: var(--act); }
+.lab-screen[data-kind="cover"] .lab-title { font-size: clamp(30px, 5vw, 44px); }
+.lab-screen[data-kind="part"] .lab-title { font-size: clamp(32px, 6vw, 52px); margin-top: 8vh; }
+.lab-lead { font-size: 19px; line-height: 1.5; color: var(--ink); margin: 0 0 18px; max-width: 40em; }
+.lab-visual.lab-cover, .lab-visual.lab-partcard { background: none; border: 0; padding: 0; }
+.lab-parts { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.lab-parts li { border-bottom: 1px solid var(--line); }
+.lab-parts button { display: grid; grid-template-columns: 2.4em 1fr auto; gap: 14px; align-items: baseline; width: 100%; padding: 16px 4px; border: 0; background: none; text-align: left; cursor: pointer; color: var(--ink); font: inherit; }
+.lab-parts button:hover strong { color: var(--act); }
+.lab-parts .n { font: 700 14px/1 var(--sans, sans-serif); color: var(--muted); font-variant-numeric: tabular-nums; }
+.lab-parts strong { display: block; font: 700 21px/1.3 var(--serif); }
+.lab-parts small { display: block; color: var(--muted); font-size: 15px; margin-top: 4px; }
+.lab-parts .m { color: var(--muted); font-size: 14px; white-space: nowrap; }
+.lab-goal-line { font-size: 20px; line-height: 1.5; margin: 0 0 8px; max-width: 38em; }
+.lab-goal-line b { font-weight: 700; margin-right: 6px; background: var(--marker, #ffe58f); padding: 1px 6px; border-radius: 4px; }
+.lab-part-meta { color: var(--muted); font-size: 14px; margin: 0 0 18px; }
+.lab-part-steps { margin: 0; padding-left: 1.4em; color: var(--ink); font-size: 17px; line-height: 1.9; }
+.lab-progress-part, .lab-progress button[data-kind="part"], .lab-progress button[data-kind="cover"] { font-weight: 700; color: var(--ink); }
+.lab-progress-part { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; padding: 12px 9px 4px; color: var(--muted); }
+.lab-progress button[data-kind="part"] { margin-top: 8px; border-top: 1px solid var(--line); border-radius: 0; }
+.lab-progress button:not([data-kind]) { padding-left: 22px; }
+body.presenting .lab-eyebrow { font-size: 15px; }
+body.presenting .lab-parts strong { font-size: 28px; }
+body.presenting .lab-parts small, body.presenting .lab-goal-line { font-size: 24px; }
+body.presenting .lab-part-steps { font-size: 24px; }
+/* Bouton « Voir la réponse » : contour bordeaux, entre Retour et Continuer. */
+.lab-answer { border-color: var(--act) !important; margin-left: auto; }
+.lab-answer[hidden] { display: none; }
+@media (max-width: 480px) { .lab-bottom-inner .lab-btn { padding: 10px 12px; font-size: 15px; } }

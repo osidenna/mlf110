@@ -1,12 +1,15 @@
 (function () {
   'use strict';
   // Séances disposant d'un laboratoire « apprendre en faisant » (cmXX-lab.html).
-  const LABS=[1,2,3,4,5,6,7,8,9,10];
+  const LABS=[1,2,3,4,5,6,7,8];
   // Calendrier (schedule.js) : date de chaque CM ; un TD prend la date du dernier CM dont il dépend.
   const SCH=window.MLF110Schedule, DATES=SCH?SCH.cmDates():{};
   const cmDate=n=>DATES['cm'+String(n).padStart(2,'0')]||null;
   const dateText=n=>SCH?SCH.label(cmDate(n)):'';
   const tdCm=t=>Math.max(...(t.after||[t.number]));
+  // Une séance = une entrée : le laboratoire ; les notes et le TD sont secondaires.
+  const entry=l=>LABS.includes(l.number)?'cm'+String(l.number).padStart(2,'0')+'-lab.html':'#'+l.id;
+  const tdFor=l=>(window.MLF110_TD||[]).filter(t=>!soon(t)&&tdCm(t)===l.number);
   const soon=x=>!!x.comingSoon;
   const shortDate=n=>cmDate(n)?new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'long',timeZone:'UTC'}).format(new Date(cmDate(n)+'T00:00:00Z')):'';
   const dateBadge=(n,isSoon=false)=>{const label=shortDate(n)||(isSoon?'À venir':'');return label?'<span class="soon-badge'+(isSoon?' is-soon':' is-date')+'"'+(isSoon?' title="À venir"':'')+'>'+esc(label)+'</span>':'';};
@@ -121,8 +124,8 @@
     math(el);return el;
   }
   function home() {
-    current=null;document.title='MLF110 · Machine Learning fondamental et évaluation des modèles';
-    main.innerHTML='<div class="content home-content minimal-home"><header class="lesson-header"><div class="eyebrow">MLF110 · MASTER DEML</div><h1>Le plan du cours</h1></header><section class="course-outline" aria-label="Cours">'+lessons.map(l=>soon(l)?'<article class="course-row is-soon"><span class="course-row-number">'+String(l.number).padStart(2,'0')+'</span><h3>'+esc(l.title)+'</h3>'+dateBadge(l.number,true)+'</article>':'<article class="course-row"><span class="course-row-number">'+String(l.number).padStart(2,'0')+'</span><div><h3><a href="#'+l.id+'">'+esc(l.title)+'</a></h3><div class="row-links"><a href="#'+l.id+'">Cours</a>'+(LABS.includes(l.number)?'<a href="cm'+String(l.number).padStart(2,'0')+'-lab.html">Interactif</a>':'')+button('Présenter','present',l.id,'text-button')+'</div></div>'+dateBadge(l.number)+'</article>').join('')+'</section><a class="compact-td-link" href="#td">Travaux dirigés '+icon('next')+'</a>'+footer()+'</div>';
+    current=null;document.title='MLF110 · Fondements du machine learning et évaluation des modèles';
+    main.innerHTML='<div class="content home-content minimal-home"><header class="lesson-header"><div class="eyebrow">MLF110 · MASTER DEML</div><h1>Le plan du cours</h1><p class="lead">Fondements du machine learning et évaluation des modèles · S1 · 4 ECTS · CM 12 h (8 × 1 h 30) · TD 15 h (10 × 1 h 30) · TP 15 h.</p></header><section class="course-outline" aria-label="Cours">'+lessons.map(l=>soon(l)?'<article class="course-row is-soon"><span class="course-row-number">'+String(l.number).padStart(2,'0')+'</span><h3>'+esc(l.title)+'</h3>'+dateBadge(l.number,true)+'</article>':'<article class="course-row"><span class="course-row-number">'+String(l.number).padStart(2,'0')+'</span><div><h3><a href="'+entry(l)+'">'+esc(l.title)+'</a></h3><div class="row-links">'+(LABS.includes(l.number)?'<a class="row-primary" href="'+entry(l)+'" title="Le cours présenté en classe : plan, parties, exercices interactifs">Cours</a>':'')+'<a href="#'+l.id+'" title="Le même contenu en texte, à relire ou imprimer">Notes</a>'+tdFor(l).map(t=>'<a href="#td/'+t.id+'">TD '+t.number+'</a>').join('')+'</div></div>'+dateBadge(l.number)+'</article>').join('')+'</section><a class="compact-td-link" href="#td">Travaux dirigés '+icon('next')+'</a>'+footer()+'</div>';
   }
 
   function readingLayout(lesson,section) {
@@ -163,11 +166,11 @@
   function lessonPage(lesson, sectionId) {
     current=lesson;document.title=lesson.title+' · MLF110';
     const notes=window.MLF110_PDFS?.[lesson.id]?pdfLink(lesson.id):button('Notes','print',lesson.id,'text-button');
-    main.innerHTML='<div class="content lesson-content compact-lesson"><header class="lesson-header"><div class="eyebrow">MLF110 · CM '+String(lesson.number).padStart(2,'0')+' · 90 MIN</div><h1>'+esc(lesson.title)+'</h1><div class="lesson-actions">'+(LABS.includes(lesson.number)?'<a class="primary-button lab-link" href="cm'+String(lesson.number).padStart(2,'0')+'-lab.html">Interactif</a>':'')+button(icon('present')+'Présenter','present',lesson.id,'secondary-button')+notes+'</div></header><details class="lesson-plan"><summary>Plan</summary><p class="plan-objective">'+esc(lesson.objective)+'</p><ol>'+lesson.sections.map(s=>'<li><a href="#'+lesson.id+'/'+s.id+'">'+esc(s.title)+'</a></li>').join('')+'</ol></details><div class="lesson-sections"></div><details class="lesson-check compact-check"><summary>Vérifier sa compréhension</summary><div class="quiz-list"></div></details><div class="related-td"></div>'+sources(lesson)+'<nav class="lesson-pagination" aria-label="Séances précédente et suivante">'+(lesson.number>1?'<a href="#cm'+String(lesson.number-1).padStart(2,'0')+'">'+icon('prev')+'Précédente</a>':'<a href="#cours">'+icon('prev')+'Plan</a>')+(lesson.number<10?'<a href="#cm'+String(lesson.number+1).padStart(2,'0')+'">Suivante'+icon('next')+'</a>':'<a href="#td">TD'+icon('next')+'</a>')+'</nav>'+footer()+'</div>';
+    main.innerHTML='<div class="content lesson-content compact-lesson"><header class="lesson-header"><div class="eyebrow">MLF110 · CM '+String(lesson.number).padStart(2,'0')+' · 90 MIN</div><h1>'+esc(lesson.title)+'</h1><div class="lesson-actions">'+(LABS.includes(lesson.number)?'<a class="primary-button lab-link" href="'+entry(lesson)+'">Ouvrir le cours</a>':button(icon('present')+'Présenter','present',lesson.id,'secondary-button'))+notes+'</div></header><details class="lesson-plan"><summary>Plan</summary><p class="plan-objective">'+esc(lesson.objective)+'</p><ol>'+lesson.sections.map(s=>'<li'+(s.extra?' class="is-extra"':'')+'><a href="#'+lesson.id+'/'+s.id+'">'+esc(s.title)+'</a>'+(s.minutes?' <small>'+s.minutes+' min</small>':' <small>pour aller plus loin</small>')+'</li>').join('')+'</ol></details><div class="lesson-sections"></div><details class="lesson-check compact-check"><summary>Vérifier sa compréhension</summary><div class="quiz-list"></div></details><div class="related-td"></div>'+sources(lesson)+'<nav class="lesson-pagination" aria-label="Séances précédente et suivante">'+(lesson.number>1?'<a href="#cm'+String(lesson.number-1).padStart(2,'0')+'">'+icon('prev')+'Précédente</a>':'<a href="#cours">'+icon('prev')+'Plan</a>')+(lesson.number<lessons.length?'<a href="#cm'+String(lesson.number+1).padStart(2,'0')+'">Suivante'+icon('next')+'</a>':'<a href="#td">TD'+icon('next')+'</a>')+'</nav>'+footer()+'</div>';
     const target=main.querySelector('.lesson-sections');
     lesson.sections.forEach((section,index)=>{
-      const article=document.createElement('article');article.className='lesson-slide';article.id=section.id;
-      article.innerHTML='<div class="slide-label"><span>'+String(lesson.number).padStart(2,'0')+'.'+String(index+1).padStart(2,'0')+'</span>'+button(icon('present'),'present-section',lesson.id+'/'+index,'icon-button')+'</div><h2>'+esc(section.title)+'</h2>';
+      const article=document.createElement('article');article.className='lesson-slide'+(section.extra?' is-extra':'');article.id=section.id;
+      article.innerHTML='<div class="slide-label"><span>'+(section.extra?'POUR ALLER PLUS LOIN · HORS SÉANCE':String(lesson.number).padStart(2,'0')+'.'+String(index+1).padStart(2,'0')+(section.minutes?' · '+section.minutes+' MIN':''))+'</span>'+button(icon('present'),'present-section',lesson.id+'/'+index,'icon-button')+'</div><h2>'+esc(section.title)+'</h2>';
       compactSection(lesson,section,article);target.appendChild(article);
     });
     (lesson.quiz||[]).forEach((q,i)=>main.querySelector('.quiz-list').appendChild(quizElement(q,i)));

@@ -116,7 +116,7 @@
       `<details class="td-outline"><summary>Plan du TD</summary><p>${H.esc(td.objective)}</p><nav class="td-index" aria-label="Exercices du TD">${index}</nav><p>${workMinutes} min d’exercices${ORAL ? ' · 15 min d’oral' : ''}.</p><p>${td.after.map(n => `<a href="#cm${n2(n)}">Revoir le CM ${n}</a>`).join(' · ')}</p></details>` +
       parts.map(ex).join('') +
       (ORAL ? `<article class="td-ex" id="${td.id}-oral" data-status="${getStatus(td.id + '-oral')}"><details class="td-oral-panel"><summary><span>Mini-oral</span><span>15 min</span></summary><div class="td-ex-body"><div class="td-ex-tools"><span>3 min par binôme · sans notes, sans IA.</span>${status(td.id + '-oral', 'mini-oral')}</div><div class="td-widget" data-oral></div></div></details></article>` : '') +
-      H.sources(td) + `<nav class="lesson-pagination"><a href="#td">${H.icon('prev')}Tous les TD</a>${td.number < 12 ? `<a href="#td/td${n2(td.number + 1)}">TD suivant ${H.icon('next')}</a>` : ''}</nav>` + H.footer() + '</div>';
+      H.sources(td) + `<nav class="lesson-pagination"><a href="#td">${H.icon('prev')}Tous les TD</a>${td.number < (window.MLF110_TD || []).length ? `<a href="#td/td${n2(td.number + 1)}">TD suivant ${H.icon('next')}</a>` : ''}</nav>` + H.footer() + '</div>';
 
     if (ORAL && window.MLF110Oral) window.MLF110Oral.mount(ORAL.map((t, i) => ({face: i + 1, name: t.theme, questions: [{q: t.q, relance: t.relance, attendus: t.attendus}]})), main.querySelector('[data-oral]'));
     main.querySelectorAll('[data-jump]').forEach(a => a.addEventListener('click', ev => {

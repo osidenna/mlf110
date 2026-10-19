@@ -24,7 +24,7 @@
   function cmDates(s = SCHEDULE) {
     const out = {};
     let d = s.start ? new Date(s.start + 'T00:00:00Z') : null;
-    for (let n = 1; n <= 10; n++) {
+    for (let n = 1; n <= 8; n++) {   // 8 CM de 1 h 30 = 12 h (fiche UE)
       if (d) { while (s.skip.includes(iso(d))) d = new Date(d.getTime() + 7 * 864e5); }
       const id = 'cm' + pad(n), forced = s.dates[id];
       out[id] = forced === 'TBD' ? null : forced || (d ? iso(d) : null);
