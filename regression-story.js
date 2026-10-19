@@ -236,6 +236,8 @@
     return host;
   }
 
-  root.RegressionStory = {create, cleanup, stages, data: baseData, fit, mse};
+  // mount(el, options) : interface attendue par app.js pour les blocs « story ».
+  const mount = (el, options = {}) => { el.append(create({}, options)); };
+  root.RegressionStory = {create, mount, cleanup, stages, data: baseData, fit, mse};
   if (typeof module !== 'undefined' && module.exports) module.exports = root.RegressionStory;
 })(typeof window !== 'undefined' ? window : globalThis);
