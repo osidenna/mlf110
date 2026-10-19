@@ -1,0 +1,176 @@
+/* MLF110 · laboratoire « apprendre en faisant » — une idée, un visuel, une action par écran. */
+@font-face { font-family: Bitter; src: url('assets/fonts/bitter-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: Bitter; src: url('assets/fonts/bitter-latin-700-normal.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: Roboto; src: url('assets/fonts/roboto-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: Roboto; src: url('assets/fonts/roboto-latin-700-normal.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+
+:root {
+  --paper: #fffdf9;
+  --card: #ffffff;
+  --ink: #1d2433;
+  --muted: #6b6f7a;
+  --line: #e9e3d8;
+  /* Classes : chats beige, chiens bleus. */
+  --cat: #b0804c;
+  --cat-ink: #85592b;
+  --cat-soft: #f6ecdc;
+  --dog: #2f62a3;
+  --dog-ink: #23497a;
+  --dog-soft: #e5eef9;
+  /* Actions : rouge bordeaux. */
+  --act: #7b1e2e;
+  --act-hover: #5f1622;
+  --act-soft: #f5e6e8;
+  --good: #2f7d4f;
+  --bad: #c24a26;
+  --marker: #ffe58f;
+  --serif: Bitter, Georgia, serif;
+  --sans: Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.5 var(--sans); }
+button { font: inherit; }
+mark { background: linear-gradient(transparent 55%, var(--marker) 55%); color: inherit; padding: 0 .1em; }
+.cat-t { color: var(--cat-ink); font-weight: 700; }
+.dog-t { color: var(--dog-ink); font-weight: 700; }
+
+/* Barre du haut : titre, progression, présentation. */
+.lab-top { position: sticky; top: 0; z-index: 5; background: rgba(255,253,249,.94); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+.lab-top-inner { max-width: 820px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
+.lab-brand { font: 700 15px var(--serif); white-space: nowrap; color: var(--ink); text-decoration: none; }
+.lab-brand small { color: var(--muted); font: 400 13px var(--sans); margin-left: 6px; }
+.lab-progress { flex: 1; display: flex; gap: 4px; }
+.lab-progress span { flex: 1; height: 7px; border-radius: 4px; background: var(--line); cursor: pointer; }
+.lab-progress span.done { background: #d9b9bf; }
+.lab-progress span.now { background: var(--act); }
+.lab-icon { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 6px 10px; cursor: pointer; color: var(--ink); font-size: 14px; white-space: nowrap; }
+.lab-icon:hover { border-color: var(--act); color: var(--act); }
+
+/* Écran d'une étape. */
+.lab-screen { max-width: 820px; margin: 0 auto; padding: 20px 16px 120px; }
+.lab-chapter { font: 700 12px var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--act); }
+.lab-chapter span { color: var(--muted); font-weight: 400; letter-spacing: 0; text-transform: none; margin-left: 6px; }
+.lab-title { font: 700 clamp(24px, 4vw, 32px)/1.2 var(--serif); margin: 6px 0 8px; }
+.lab-prompt { font-size: clamp(18px, 2.4vw, 21px); line-height: 1.45; margin: 0 0 16px; max-width: 46em; }
+.lab-visual { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 10px; box-shadow: 0 1px 0 rgba(0,0,0,.03); }
+.lab-visual svg { display: block; width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; }
+.lab-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 14px 0 0; }
+.lab-readout { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.lab-readout > div { background: #faf6ef; border: 1px solid var(--line); border-radius: 12px; padding: 6px 12px; min-width: 88px; }
+.lab-readout small { display: block; color: var(--muted); font-size: 12px; }
+.lab-readout strong { font: 700 20px var(--serif); }
+
+/* Choix, curseurs, boutons à bascule. */
+.lab-choices { display: grid; gap: 10px; margin-top: 14px; }
+.lab-choice { text-align: left; border: 2px solid var(--line); background: var(--card); border-radius: 14px; padding: 12px 16px; cursor: pointer; font-size: 17px; color: var(--ink); transition: border-color .15s, transform .1s; }
+.lab-choice:hover:not(:disabled) { border-color: var(--act); }
+.lab-choice:active:not(:disabled) { transform: scale(.99); }
+.lab-choice.right { border-color: var(--good); background: #eef7f1; }
+.lab-choice.wrong { border-color: var(--bad); background: #fbefea; }
+.lab-choice:disabled { cursor: default; }
+.lab-seg { display: inline-flex; border: 2px solid var(--act); border-radius: 12px; overflow: hidden; }
+.lab-seg button { border: 0; background: var(--card); color: var(--act); padding: 7px 14px; cursor: pointer; font-weight: 700; }
+.lab-seg button + button { border-left: 2px solid var(--act); }
+.lab-seg button[aria-pressed="true"] { background: var(--act); color: #fff; }
+.lab-seg button:disabled { opacity: .45; cursor: not-allowed; }
+.lab-slider { display: flex; align-items: center; gap: 10px; font-weight: 700; flex: 1; min-width: 220px; }
+.lab-slider input { flex: 1; accent-color: var(--act); height: 28px; }
+.lab-slider output { font: 700 22px var(--serif); min-width: 2.6em; text-align: center; color: var(--act); }
+.lab-goal { display: flex; gap: 8px; align-items: center; margin-top: 12px; padding: 8px 12px; border: 2px dashed #d9b9bf; border-radius: 12px; color: var(--act); font-weight: 700; font-size: 15px; }
+.lab-goal.met { border-style: solid; border-color: var(--good); color: var(--good); background: #eef7f1; }
+.lab-goal::before { content: '◎'; font-size: 18px; }
+.lab-goal.met::before { content: '✓'; }
+
+/* Retour : mascotte et phrase courte. */
+.lab-feedback { display: none; gap: 12px; align-items: center; margin-top: 16px; padding: 12px 14px; border-radius: 14px; animation: lab-pop .25s ease-out; }
+.lab-feedback.show { display: flex; }
+.lab-feedback.good { background: #eef7f1; border: 1px solid #bfdcc9; }
+.lab-feedback.bad { background: #fbefea; border: 1px solid #efc9b9; }
+.lab-feedback.info { background: #faf6ef; border: 1px solid var(--line); }
+.lab-feedback svg.mascot { width: 58px; height: 58px; flex: none; }
+.lab-feedback p { margin: 0; }
+@keyframes lab-pop { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.lab-details { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 8px; color: var(--muted); font-size: 15px; }
+.lab-details summary { cursor: pointer; color: var(--act); font-weight: 700; }
+.lab-details .math-display { display: block; margin: 8px 0; color: var(--ink); overflow-x: auto; }
+
+/* Barre basse : retour / continuer. */
+.lab-bottom { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(255,253,249,.96); border-top: 1px solid var(--line); z-index: 5; }
+.lab-bottom-inner { max-width: 820px; margin: 0 auto; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.lab-btn { border: 0; border-radius: 14px; padding: 12px 26px; font-weight: 700; font-size: 17px; cursor: pointer; background: var(--act); color: #fff; box-shadow: 0 3px 0 var(--act-hover); }
+.lab-btn:hover:not(:disabled) { background: var(--act-hover); }
+.lab-btn:disabled { background: #d8cfd1; box-shadow: 0 3px 0 #c4babc; cursor: not-allowed; }
+.lab-btn.ghost { background: transparent; color: var(--act); box-shadow: none; border: 2px solid transparent; }
+.lab-btn.ghost:hover:not(:disabled) { background: var(--act-soft); }
+.lab-btn.ghost:disabled { background: transparent; color: #c9bfc1; box-shadow: none; }
+.lab-hint { color: var(--muted); font-size: 14px; }
+
+/* SVG : axes, voisins, classement. */
+.ax { stroke: #c9c1b3; stroke-width: 1; }
+.ax-label { fill: var(--muted); font: 13px var(--sans); }
+.tick { fill: var(--muted); font: 11px var(--sans); }
+.nb-line { stroke: var(--act); stroke-width: 1.6; stroke-dasharray: 4 3; }
+.nb-ring { fill: none; stroke: var(--act); stroke-width: 2.4; }
+.hood { fill: rgba(123,30,46,.05); stroke: var(--act); stroke-width: 1.4; stroke-dasharray: 6 4; }
+.lattice-cat { fill: var(--cat); opacity: .32; }
+.lattice-dog { fill: var(--dog); opacity: .32; }
+.tap { cursor: pointer; }
+.tap:hover .glyph { filter: drop-shadow(0 0 3px rgba(123,30,46,.6)); }
+.drag { cursor: grab; }
+.drag:active { cursor: grabbing; }
+.pick-ok { fill: none; stroke: var(--good); stroke-width: 3; }
+.pick-bad { fill: none; stroke: var(--bad); stroke-width: 3; }
+.thr { stroke: var(--act); stroke-width: 3; }
+.thr-handle { fill: var(--act); cursor: ew-resize; }
+.pos-zone { fill: rgba(47,98,163,.07); }
+.curve { fill: none; stroke: var(--act); stroke-width: 2.4; }
+.curve-ghost { fill: none; stroke: #c9c1b3; stroke-width: 2; stroke-dasharray: 5 4; }
+.dot-now { fill: var(--act); stroke: #fff; stroke-width: 2; }
+.dot-seen { fill: #d9b9bf; }
+.diag { stroke: #d6cfc3; stroke-dasharray: 4 4; }
+.vote-cell { stroke: #fff; stroke-width: 2; }
+.cell-good { fill: #cfe6d7; }
+.cell-tie { fill: #efe4c9; }
+.cell-bad { fill: #f1c2b3; }
+.cell-sel { fill: none; stroke: var(--ink); stroke-width: 2; }
+.card-step { cursor: pointer; }
+
+/* Fin de leçon. */
+.lab-recap { display: grid; gap: 8px; margin: 12px 0; padding: 0; list-style: none; }
+.lab-recap li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.lab-recap li::before { content: '✓ '; color: var(--good); font-weight: 700; }
+
+/* Présentation : plein écran, tout plus grand. */
+body.presenting { font-size: 21px; }
+body.presenting .lab-screen, body.presenting .lab-top-inner, body.presenting .lab-bottom-inner { max-width: 1100px; }
+body.presenting .lab-prompt { font-size: 26px; }
+body.presenting .lab-title { font-size: 40px; }
+body.presenting .lab-visual { max-width: 900px; margin: 0 auto; }
+
+@media (max-width: 600px) {
+  html, body { font-size: 16px; }
+  .lab-brand small { display: none; }
+  .lab-screen { padding-top: 14px; }
+  .lab-visual { padding: 4px; border-radius: 14px; }
+  .lab-btn { padding: 11px 20px; }
+  .lab-icon.present { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .lab-feedback { animation: none; } }
+
+/* Mascottes SID34 : un seul visage visible, sourire quand c'est réussi. */
+.mascot .mascot-reveal { display: none; }
+.lab-feedback.good .mascot .mascot-rest { display: none; }
+.lab-feedback.good .mascot .mascot-reveal { display: inline; }
+.lab-choice svg { vertical-align: middle; }
+/* Le visuel reste dans l'écran : consigne, visuel et action visibles ensemble. */
+.lab-visual > svg { width: auto; max-width: 100%; max-height: min(52vh, 480px); margin: 0 auto; }
+body.presenting .lab-visual > svg { max-height: 58vh; }
+.lab-btn { white-space: nowrap; }
+@media (max-width: 600px) { .lab-hint { display: none; } }
+/* Petites têtes en ligne (votes, matrices) : leur propre taille, jamais pleine largeur. */
+.lab-visual svg[width] { width: revert-layer; width: auto; height: auto; display: inline-block; }
+.lab-choice .lab-seg { flex-wrap: wrap; max-width: 100%; }
+.lab-choice code { white-space: normal; overflow-wrap: anywhere; font-size: 14px; }
+.lattice-rab { fill: #3d8a5a; opacity: .32; }
+.rab-t { color: #2c6943; font-weight: 700; }

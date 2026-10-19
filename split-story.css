@@ -1,0 +1,111 @@
+/* One light figure, one current decision. Circle / diamond / square encode the
+   three roles even without colour. Scrolling is an explicit reading mode. */
+.split-story { --split-train: #8a4f8c; --split-validation: #2e6b4f; --split-test: #b4532a; padding: 24px 28px; border: 1px solid var(--line, #e5e7eb); border-radius: 14px; background: #fff; }
+.split-top { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 22px; }
+.split-kicker { font-size: 11px; font-weight: 700; letter-spacing: .1em; color: var(--muted, #6e7380); }
+.split-scroll-toggle { font-size: 13px !important; padding: 7px 12px !important; }
+.split-layout { display: grid; grid-template-columns: minmax(230px, .72fr) minmax(420px, 1.4fr); gap: 28px; align-items: start; }
+.split-step-number { display: block; margin: 0 0 12px; font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--muted, #6e7380); }
+.split-step h3 { font-size: 25px; margin: 0 0 18px; }
+.split-step p { font-size: 17px; line-height: 1.6; margin: 0 0 18px; }
+.split-step .split-question { font-size: 16px; font-weight: 700; border-left: 3px solid var(--marker, #ffe58f); padding-left: 13px; margin-top: 24px; }
+.split-figure svg { width: 100%; height: auto; overflow: visible; }
+.split-dot { transition: transform .72s cubic-bezier(.22,.68,.18,1), opacity .3s ease; transform-box: view-box; transform-origin: 0 0; }
+.split-pool, .split-tray-row, .split-plot-grid, .split-park, .split-model, .split-test-lock { transition: opacity .24s ease; }
+.split-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 9px 22px; margin: 8px 0 18px; font-size: 12px; color: var(--ink-2, #464d5c); }
+.split-legend > span { display: inline-flex; align-items: center; gap: 7px; }
+.split-symbol { display: inline-block; width: 9px; height: 9px; flex: 0 0 9px; }
+.split-train { background: var(--split-train); border-radius: 50%; }
+.split-validation { background: var(--split-validation); transform: rotate(45deg); }
+.split-test { background: var(--split-test); border-radius: 1px; }
+.split-readout { display: grid; gap: 4px; padding: 13px 16px; background: var(--paper, #fafafa); border-radius: 8px; min-height: 78px; }
+.split-readout strong { color: var(--ink, #1d2433); font-size: 17px; line-height: 1.4; }
+.split-readout span { color: var(--ink-2, #464d5c); font-size: 13px; line-height: 1.5; }
+.split-controls { margin-top: 14px; min-height: 45px; }
+.split-button { border: 1px solid var(--line-strong, #d1d5db); border-radius: 7px; padding: 9px 14px; background: #fff; color: var(--ink, #1d2433); font-size: 14px; line-height: 1.4; cursor: pointer; }
+.split-button:hover { background: var(--surface, #f4f4f5); }
+.split-button[aria-pressed="true"] { border-color: var(--ink, #1d2433); background: var(--marker-soft, #fff3c4); box-shadow: inset 0 -2px 0 var(--marker, #ffe58f); }
+.split-button:disabled { opacity: .45; cursor: default; }
+.split-button:focus-visible { outline: 3px solid var(--focus, #8a4f8c); outline-offset: 3px; }
+.split-primary { border-color: var(--ink, #1d2433); background: var(--ink, #1d2433); color: #fff; }
+.split-primary:hover { background: #3c4350; }
+.split-degree-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+.split-validation-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.split-candidate { display: grid; gap: 4px; padding: 10px 8px; text-align: center; }
+.split-candidate span { font-size: 13px; }
+.split-candidate strong { font-size: 21px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.split-candidate small { font-size: 11px; color: var(--muted, #6e7380); }
+.split-control-hint, .split-locked-choice { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; color: var(--muted, #6e7380); font-size: 12px; line-height: 1.5; }
+.split-locked-choice svg { width: 17px; height: 17px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.6; }
+.split-navigation { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line, #e5e7eb); }
+.split-position { color: var(--muted, #6e7380); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.split-footnote { margin: 20px 0 0; color: var(--muted, #6e7380); font-size: 12px; line-height: 1.5; max-width: 85ch; }
+.split-scrolly .split-sticky { position: sticky; top: 24px; }
+.split-scrolly .split-step { min-height: 70vh; padding-top: 18vh; padding-bottom: 16vh; opacity: .38; transition: opacity .2s ease; }
+.split-scrolly .split-step.active { opacity: 1; }
+.split-scrolly .split-step:first-child { padding-top: 18px; }
+@media screen {
+  .split-scrolly .split-figure svg { width: 100%; max-height: min(42vh, 310px); }
+}
+.split-static .split-dot { transition-duration: 0s; }
+.split-classroom { padding: 18px 22px; }
+.split-classroom .split-top { display: none; }
+.split-classroom .split-step-number, .split-classroom .split-step h3, .split-classroom .split-footnote, .split-classroom .split-control-hint { display: none; }
+.split-classroom .split-layout { grid-template-columns: minmax(250px, .65fr) minmax(500px, 1.5fr); gap: 22px; }
+.split-classroom .split-figure svg { width: 100%; max-height: 280px; }
+.split-classroom .split-step p { font-size: 20px; }
+.split-classroom .split-step .split-question { font-size: 18px; }
+.split-classroom .split-readout { min-height: 0; padding: 9px 12px; gap: 3px; }
+.split-classroom .split-readout strong { font-size: 19px; }
+.split-classroom .split-readout span { font-size: 14px; line-height: 1.35; }
+.split-classroom .split-legend { margin: 2px 0 8px; font-size: 13px; }
+.split-classroom .split-controls { margin-top: 10px; min-height: 0; }
+.split-classroom .split-candidate { padding: 7px 6px; gap: 3px; }
+.split-classroom .split-candidate strong { font-size: 19px; }
+.split-classroom .split-candidate small { font-size: 10px; }
+.split-classroom .split-navigation { display: none; }
+.split-static .split-controls { display: none; }
+.split-static .split-figure svg { overflow: hidden; }
+@media (max-width: 960px) {
+  .split-story { padding: 20px; }
+  .split-layout, .split-classroom .split-layout { display: block; }
+  .split-step h3 { font-size: 24px; }
+  .split-step .split-question { margin-top: 12px; margin-bottom: 16px; }
+  .split-step p { font-size: 16px; }
+  .split-top { margin-bottom: 18px; }
+  .split-classroom .split-step p { font-size: 18px; }
+}
+@media (max-width: 480px) {
+  .split-story { padding: 15px; }
+  .split-top { margin-bottom: 15px; }
+  .split-kicker { font-size: 10px; letter-spacing: .04em; }
+  .split-legend { gap: 7px 14px; font-size: 11px; }
+  .split-readout { padding: 11px 12px; min-height: 80px; }
+  .split-readout strong { font-size: 16px; }
+  .split-button { font-size: 12px; padding: 9px 10px; }
+  .split-candidate strong { font-size: 18px; }
+  .split-candidate small { font-size: 9px; }
+  .split-navigation { gap: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .split-story *, .split-story *::before, .split-story *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+@media print {
+  .split-story { break-inside: avoid; padding: 14px 16px; box-shadow: none; }
+  .split-top, .split-controls, .split-navigation { display: none !important; }
+  .split-step h3, .split-step-number { display: none !important; }
+  .split-figure svg { max-height: 270px; width: 100%; overflow: hidden; }
+  .split-layout { display: grid; grid-template-columns: minmax(190px, .65fr) minmax(340px, 1.5fr); gap: 18px; }
+  .split-sticky { position: static !important; }
+  .split-step:not(.active) { display: none !important; }
+  .split-step { min-height: auto !important; padding: 0 !important; opacity: 1 !important; }
+  .split-step h3 { font-size: 20px; }
+  .split-step p { font-size: 13px; line-height: 1.5; }
+  .split-step .split-question { margin-top: 12px; font-size: 12px; }
+  .split-legend { font-size: 10px; margin: 3px 0 10px; }
+  .split-readout { min-height: 0; padding: 9px 12px; }
+  .split-readout strong { font-size: 13px; }
+  .split-readout span { font-size: 10px; }
+  .split-footnote { font-size: 9px; margin-top: 10px; }
+  .print-root .slide-body .split-footnote { font-size: 9px; line-height: 1.5; margin: 10px 0 0; }
+}
