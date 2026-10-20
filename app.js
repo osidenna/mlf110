@@ -42,7 +42,7 @@
     sidebar.querySelector('button')?.focus();
   }
   function renderNav() {
-    sidebar.innerHTML='<div class="drawer-header"><a class="brand" href="#cours"><span class="brand-name">Machine Learning</span><span class="brand-code">MLF110</span></a>'+button('×','close-menu','','icon-button')+'</div><nav class="compact-course-nav" aria-label="Séances">'+lessons.map(l=>soon(l)?'<div class="lesson-link is-soon"><span class="chapter-number">'+String(l.number).padStart(2,'0')+'</span><span class="nav-lesson-title">'+esc(l.title)+'</span>'+dateBadge(l.number,true)+'</div>':'<a class="lesson-link '+(current?.id===l.id?'active':'')+'" href="#'+l.id+'"'+(current?.id===l.id?' aria-current="page"':'')+'><span class="chapter-number">'+String(l.number).padStart(2,'0')+'</span><span>'+esc(l.title)+'</span></a>').join('')+'</nav><div class="drawer-links"><a href="#td">TD</a><a href="#ressources">Ressources</a></div>';
+    sidebar.innerHTML='<div class="drawer-header"><a class="brand" href="#cours"><span class="brand-name">Fondements du machine learning</span><span class="brand-code">MLF110</span></a>'+button('×','close-menu','','icon-button')+'</div><nav class="compact-course-nav" aria-label="Séances">'+lessons.map(l=>soon(l)?'<div class="lesson-link is-soon"><span class="chapter-number">'+String(l.number).padStart(2,'0')+'</span><span class="nav-lesson-title">'+esc(l.title)+'</span>'+dateBadge(l.number,true)+'</div>':'<a class="lesson-link '+(current?.id===l.id?'active':'')+'" href="#'+l.id+'"'+(current?.id===l.id?' aria-current="page"':'')+'><span class="chapter-number">'+String(l.number).padStart(2,'0')+'</span><span>'+esc(l.title)+'</span></a>').join('')+'</nav><div class="drawer-links"><a href="#td">TD</a><a href="#ressources">Ressources</a></div>';
   }
 
   function quizElement(q, index=0, options={}) {
@@ -125,7 +125,7 @@
   }
   function home() {
     current=null;document.title='MLF110 · Fondements du machine learning et évaluation des modèles';
-    main.innerHTML='<div class="content home-content minimal-home"><header class="lesson-header"><div class="eyebrow">MLF110 · MASTER DEML</div><h1>Le plan du cours</h1><p class="lead">Fondements du machine learning et évaluation des modèles · S1 · 4 ECTS · CM 12 h (8 × 1 h 30) · TD 15 h (10 × 1 h 30) · TP 15 h.</p></header><section class="course-outline" aria-label="Cours">'+lessons.map(l=>soon(l)?'<article class="course-row is-soon"><span class="course-row-number">'+String(l.number).padStart(2,'0')+'</span><h3>'+esc(l.title)+'</h3>'+dateBadge(l.number,true)+'</article>':'<article class="course-row"><span class="course-row-number">'+String(l.number).padStart(2,'0')+'</span><div><h3><a href="'+entry(l)+'">'+esc(l.title)+'</a></h3><div class="row-links">'+(LABS.includes(l.number)?'<a class="row-primary" href="'+entry(l)+'" title="Le cours présenté en classe : plan, parties, exercices interactifs">Cours</a>':'')+'<a href="#'+l.id+'" title="Le même contenu en texte, à relire ou imprimer">Notes</a>'+tdFor(l).map(t=>'<a href="#td/'+t.id+'">TD '+t.number+'</a>').join('')+'</div></div>'+dateBadge(l.number)+'</article>').join('')+'</section><a class="compact-td-link" href="#td">Travaux dirigés '+icon('next')+'</a>'+footer()+'</div>';
+    main.innerHTML='<div class="content home-content minimal-home"><header class="lesson-header"><div class="eyebrow">MLF110 · MASTER DEML</div><h1>Le plan du cours</h1><p class="home-meta">S1 · 4 ECTS · 8 CM et 10 TD de 1 h 30 · TP à part</p></header><section class="course-outline" aria-label="Cours">'+lessons.map(l=>soon(l)?'<article class="course-row is-soon"><span class="course-row-number">'+String(l.number).padStart(2,'0')+'</span><h3>'+esc(l.title)+'</h3>'+dateBadge(l.number,true)+'</article>':'<article class="course-row"><span class="course-row-number">'+String(l.number).padStart(2,'0')+'</span><div><h3><a href="'+entry(l)+'">'+esc(l.title)+'</a></h3><div class="row-links">'+(LABS.includes(l.number)?'<a class="row-primary" href="'+entry(l)+'" title="Le cours présenté en classe : plan, parties, exercices interactifs">Cours</a>':'')+'<a href="#'+l.id+'" title="Le même contenu en texte, à relire ou imprimer">Notes</a>'+tdFor(l).map(t=>'<a href="#td/'+t.id+'">TD '+t.number+'</a>').join('')+'</div></div>'+dateBadge(l.number)+'</article>').join('')+'</section><a class="compact-td-link" href="#td">Travaux dirigés '+icon('next')+'</a>'+footer()+'</div>';
   }
 
   function readingLayout(lesson,section) {
@@ -202,6 +202,8 @@
   function route(){
     if(!presentation.hidden)closePresentation();
     reset(cleanups);cleanStory(main);closeMenu();
+    // Adresse propre, comme SID34 : …/mlf110/ pour le plan (sans index.html ni #cours).
+    if(/\/index\.html$/.test(location.pathname)||location.hash==='#cours'||location.hash==='#')history.replaceState(null,'',location.pathname.replace(/index\.html$/,'')+(location.hash==='#cours'||location.hash==='#'?'':location.hash));
     let hash;try{hash=decodeURIComponent(location.hash.slice(1));}catch{hash='cours';}
     const [key,sub]=hash.split('/');
     if(key==='td'){const td=tds.find(x=>x.id===sub);td&&soon(td)?soonPage('TD '+String(td.number).padStart(2,'0'),td.title,tdCm(td)):td?tdPage(td):tdIndex();}

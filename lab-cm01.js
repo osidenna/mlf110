@@ -297,7 +297,7 @@
       {title: 'Ce que vous avez fait', free: true, recapOpen: true, prompt: 'En une séance :',
         render(ctx) {
           ctx.visual.innerHTML = '<ul class="lab-recap"><li>identifié une cible et des variables ;</li><li>distingué classification, régression et non supervisé ;</li><li>construit une baseline : la moyenne, la classe majoritaire ;</li><li>lu une droite ' + M(String.raw`\hat y = w\,x + b`) + ' et ses résidus ' + M(String.raw`e_i = y_i - \hat y_i`) + ' ;</li><li>vérifié quand une droite convient : linéarité, variance constante, erreurs indépendantes ;</li><li>calculé MAE et RMSE, et vu la RMSE réagir à une valeur extrême.</li></ul>';
-          ctx.extra.innerHTML = '<p class="lab-next"><a class="lab-btn" href="index.html#td/td01">Ouvrir le TD 1 →</a> <a class="lab-link" href="index.html#cm01">Notes du cours</a></p>';
+          ctx.extra.innerHTML = '<p class="lab-next"><a class="lab-btn" href="./#td/td01">Ouvrir le TD 1 →</a> <a class="lab-link" href="./#cm01">Notes du cours</a></p>';
           ctx.say('good', 'Le TD 1 reprend ces calculs à la main sur de nouveaux animaux.');
         }}
     ]}
@@ -306,6 +306,6 @@
   document.addEventListener('DOMContentLoaded', () => L.run(document.getElementById('lab'), {code: 'MLF110 · CM 01', title: 'Problème ML, baseline et régression', cover: true,
     date: window.MLF110Schedule ? window.MLF110Schedule.label(window.MLF110Schedule.cmDates().cm01) : '',
     lead: 'Des chats et des chiens, deux mesures : le poids et la longueur du pelage. Sept parties, puis le TD 1.',
-    coverAfter: '<p class="lab-next"><a class="lab-link" href="index.html#cm01">Notes du cours</a> <a class="lab-link" href="index.html#td/td01">TD 1</a></p>',
-    home: 'index.html#cm01', chapters, onFinish: () => (location.href = 'index.html#td/td01')}));
+    coverAfter: '<p class="lab-next"><a class="lab-link" href="./#cm01">Notes du cours</a> <a class="lab-link" href="./#td/td01">TD 1</a></p>',
+    home: './#cm01', chapters, onFinish: () => (location.href = './#td/td01')}));
 })();

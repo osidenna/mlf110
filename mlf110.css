@@ -208,3 +208,8 @@ body,.ml-presentation,.presentation-canvas,.presentation-chrome{background:var(-
 .td-content.open-flow .td-reveal > summary{font-weight:700;color:#7b1e2e;cursor:pointer}
 .oral-attendus{margin-top:10px}.oral-attendus strong{display:block;font-size:13px;color:#7b1e2e}
 .td-figure{margin:14px 0 6px}.td-figure svg{width:100%;max-width:640px;height:auto;display:block}.td-figure figcaption{font-size:13px;color:var(--muted);margin-top:4px}
+/* Accueil sobre, comme SID34 : dates en gris, pas de pastilles, une seule ligne d'information. */
+.minimal-home .soon-badge,.minimal-home .soon-badge.is-soon,.compact-td-index .soon-badge{background:none;color:var(--muted);padding:0;font-weight:400;font-size:12px;border-radius:0}
+.home-meta{color:var(--muted);font-size:14px;margin:6px 0 0}
+.header-year{font:400 11px/1 var(--sans);color:var(--muted);letter-spacing:.04em;align-self:center}
+.minimal-home .course-row.is-soon h3{color:#6b6f7a;font-weight:400}
