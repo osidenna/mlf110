@@ -217,14 +217,17 @@
             reveal: () => st.show('line', drawLine(X, Y, x => WH * x + BH, ACT, M(String.raw`\hat y = ` + tn(BH, 2) + ' ' + tn(WH, 2).replace('-', '- ') + String.raw`\,x`))),
             feedback: () => M(String.raw`\hat b = ` + tn(YB, 2) + String.raw` - (` + tn(WH, 2) + String.raw`)\times ` + tn(XB, 2) + String.raw` \approx ` + tn(BH, 2)) + ' kg. La droite passe toujours par le point moyen ' + M(String.raw`(\bar x, \bar y)`) + '. Perte : ' + M(String.raw`L(\hat w, \hat b) \approx ` + tn(LOSS(WH, BH), 2)) + ', contre ' + tn(LOSS(-1, 11), 2) + ' pour la droite arrondie et ' + tn(LOSS(0, YB), 2) + ' pour la baseline.'});
         }},
-      {title: 'L’écriture matricielle', prompt: 'Avec plusieurs variables, on écrit ' + M(String.raw`y = X\beta + \varepsilon`) + '. Que contient la première colonne de ' + M('X') + ' ?',
+      {title: 'L’écriture matricielle', prompt: 'On empile les 24 équations ' + M(String.raw`y_i = b + w\,x_i + \varepsilon_i`) + ' en une seule : ' + M(String.raw`y = X\beta + \varepsilon`) + '. Que contient la première colonne de ' + M('X') + ' ?',
         render(ctx) {
           const st = ctx.stage; st.clear(); st.hide();
-          const rows = train.slice(0, 3).map(a => `1 & ${tn(a.x2)}`).join(String.raw` \\ `), ys = train.slice(0, 3).map(a => tn(a.x1)).join(String.raw` \\ `);
-          st.show('cards', card(40, 20, ['Forme matricielle', D(String.raw`\underbrace{\begin{pmatrix}` + ys + String.raw` \\ \vdots\end{pmatrix}}_{y} = \underbrace{\begin{pmatrix}` + rows + String.raw` \\ \vdots & \vdots\end{pmatrix}}_{X}\underbrace{\begin{pmatrix} b \\ w\end{pmatrix}}_{\beta} + \varepsilon`)], ACT, 680, 380).replace('class="lab-fcard"', 'class="lab-fcard big"'));
+          const ex = train.slice(0, 2);
+          const sys = D(String.raw`\begin{pmatrix} y_1 \\ y_2 \\ \vdots \\ y_n \end{pmatrix} = \begin{pmatrix} 1 & x_1 \\ 1 & x_2 \\ \vdots & \vdots \\ 1 & x_n \end{pmatrix} \begin{pmatrix} b \\ w \end{pmatrix} + \begin{pmatrix} \varepsilon_1 \\ \varepsilon_2 \\ \vdots \\ \varepsilon_n \end{pmatrix}`);
+          const nums = 'Ici : ' + ex.map((a, k) => M(`y_${k + 1} = ${tn(a.x1)},\\ x_${k + 1} = ${tn(a.x2)}`)).join(' ; ') + ', … , ' + M('n = 24') + '.';
+          const show = extra => st.show('cards', card(40, 16, ['Forme matricielle', sys, nums, ...extra], ACT, 680, 400).replace('class="lab-fcard"', 'class="lab-fcard big"'));
+          show([]);
           ctx.predict([['one', 'Des 1'], ['x', 'Les pelages'], ['e', 'Les résidus']], {truth: 'one',
-            reveal: () => st.show('cards', card(40, 20, ['Forme matricielle', D(String.raw`\underbrace{\begin{pmatrix}` + ys + String.raw` \\ \vdots\end{pmatrix}}_{y} = \underbrace{\begin{pmatrix}` + rows + String.raw` \\ \vdots & \vdots\end{pmatrix}}_{X}\underbrace{\begin{pmatrix} b \\ w\end{pmatrix}}_{\beta} + \varepsilon`), M(String.raw`\hat\beta = \arg\min_\beta \|y - X\beta\|^2 = (X^\top X)^{-1} X^\top y`)], ACT, 680, 380).replace('class="lab-fcard"', 'class="lab-fcard big"')),
-            feedback: () => 'La colonne de 1 porte l’ordonnée à l’origine ' + M('b') + ' (' + M(String.raw`b \times 1`) + ' sur chaque ligne). Les mêmes formules marchent avec ' + M('p') + ' variables : ' + M('X') + ' a alors ' + M('p + 1') + ' colonnes. C’est ce que calcule ' + M(String.raw`\texttt{LinearRegression().fit(X, y)}`) + '.'});
+            reveal: () => show([M(String.raw`\hat\beta = \arg\min_{\beta} \lVert y - X\beta \rVert^2 = (X^\top X)^{-1} X^\top y`)]),
+            feedback: () => 'La colonne de 1 multiplie ' + M('b') + ' : chaque ligne donne ' + M(String.raw`b \cdot 1 + w\,x_i`) + '. Avec ' + M('p') + ' variables, ' + M('X') + ' a ' + M('p + 1') + ' colonnes et la même formule donne ' + M(String.raw`\hat\beta`) + '. C’est ce que calcule ' + M(String.raw`\texttt{LinearRegression().fit(X, y)}`) + '.'});
         }},
       {title: 'Quand une droite convient-elle ?', prompt: 'Trois nuages, une droite ajustée sur chacun. Pour lequel le modèle linéaire est-il adapté ?',
         render(ctx) {
