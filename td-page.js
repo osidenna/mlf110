@@ -118,9 +118,10 @@
       (ORAL ? `<article class="td-ex" id="${td.id}-oral" data-status="${getStatus(td.id + '-oral')}"><details class="td-oral-panel"><summary><span>Mini-oral</span><span>15 min</span></summary><div class="td-ex-body"><div class="td-ex-tools"><span>3 min par binôme · sans notes, sans IA.</span>${status(td.id + '-oral', 'mini-oral')}</div><div class="td-widget" data-oral></div></div></details></article>` : '') +
       H.sources(td) + `<nav class="lesson-pagination"><a href="#td">${H.icon('prev')}Tous les TD</a>${td.number < (window.MLF110_TD || []).length ? `<a href="#td/td${n2(td.number + 1)}">TD suivant ${H.icon('next')}</a>` : ''}</nav>` + H.footer() + '</div>';
 
-    // Tout est ouvert, dans l'ordre (pas de blocs repliés) : les titres des blocs restent des repères, pas des boutons.
+    // Tout est ouvert, dans l'ordre : les titres des blocs restent des repères, pas des boutons.
     const content = main.querySelector('.td-content'); content?.classList.add('open-flow');
-    main.querySelectorAll('details').forEach(d => { d.open = true; d.addEventListener('toggle', () => { if (!d.open) d.open = true; }); });
+    // Indice, tuteur IA et solution restent des révélations à la demande (fermées, cliquables).
+    main.querySelectorAll('details:not(.td-reveal)').forEach(d => { d.open = true; d.addEventListener('toggle', () => { if (!d.open) d.open = true; }); });
     if (ORAL && window.MLF110Oral) window.MLF110Oral.mount(ORAL.map((t, i) => ({face: i + 1, name: t.theme, questions: [{q: t.q, relance: t.relance, attendus: t.attendus}]})), main.querySelector('[data-oral]'));
     main.querySelectorAll('[data-jump]').forEach(a => a.addEventListener('click', ev => {
       ev.preventDefault();

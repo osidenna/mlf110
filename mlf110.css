@@ -202,9 +202,9 @@ body,.ml-presentation,.presentation-canvas,.presentation-chrome{background:var(-
 .lesson-slide.is-extra .slide-label span{color:#7b1e2e}
 .lesson-plan li small{color:var(--muted)}
 /* TD : tout ouvert (docs/DESIGN.md, « rien de replié ») ; les résumés deviennent des titres. */
-.td-content.open-flow details > summary{pointer-events:none;cursor:default;list-style:none}
-.td-content.open-flow details > summary::-webkit-details-marker{display:none}
-.td-content.open-flow details > summary::after,.td-content.open-flow details > summary::before{display:none!important}
-.td-content.open-flow .td-reveal > summary{font-weight:700;color:#7b1e2e}
+.td-content.open-flow details:not(.td-reveal) > summary{pointer-events:none;cursor:default;list-style:none}
+.td-content.open-flow details:not(.td-reveal) > summary::-webkit-details-marker{display:none}
+.td-content.open-flow details:not(.td-reveal) > summary::after,.td-content.open-flow details:not(.td-reveal) > summary::before{display:none!important}
+.td-content.open-flow .td-reveal > summary{font-weight:700;color:#7b1e2e;cursor:pointer}
 .oral-attendus{margin-top:10px}.oral-attendus strong{display:block;font-size:13px;color:#7b1e2e}
 .td-figure{margin:14px 0 6px}.td-figure svg{width:100%;max-width:640px;height:auto;display:block}.td-figure figcaption{font-size:13px;color:var(--muted);margin-top:4px}
