@@ -232,8 +232,9 @@
       if (recap) {
         screen.querySelector('.lab-title').textContent = 'Séance terminée';
         screen.querySelector('.lab-prompt')?.remove();
-        const details = el('details', 'lab-details lab-recap-details', '<summary>À retenir</summary>');
-        recap.before(details); details.append(recap); details.open = !!s.recapOpen;
+        // recapOpen : bilan toujours visible (rien de replié) ; sinon, repli « À retenir ».
+        if (s.recapOpen) recap.before(el('h2', 'lab-recap-title', 'À retenir'));
+        else { const details = el('details', 'lab-details lab-recap-details', '<summary>À retenir</summary>'); recap.before(details); details.append(recap); }
         visual.classList.add('lab-finish');
       }
       window.SID34Math?.render?.(screen);

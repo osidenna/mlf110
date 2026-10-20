@@ -32,6 +32,10 @@
     ctx.visual.innerHTML = `<table class="lab-data"><thead><tr><th></th>${COLS.map(([k, t]) => `<th data-col="${k}">${t}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table><p class="lab-legend">5 des 40 animaux du fil rouge</p>`;
     return (target, vars) => {
       ctx.visual.querySelectorAll('[data-col]').forEach(c => { c.classList.toggle('is-target', c.dataset.col === target); c.classList.toggle('is-var', vars.includes(c.dataset.col)); });
+      // Notation : y pour la cible, x₁, x₂ pour les variables, i pour la ligne.
+      ctx.visual.querySelectorAll('th[data-col]').forEach(th => { th.querySelector('.nt')?.remove(); const k = th.dataset.col, j = vars.indexOf(k);
+        if (k === target || j >= 0) th.insertAdjacentHTML('beforeend', `<span class="nt">${k === target ? 'y' : vars.length > 1 ? 'x' + '₁₂'[j] : 'x'}</span>`); });
+      ctx.visual.querySelector('th').innerHTML = '<span class="nt">i</span>';
       ctx.visual.querySelector('.lab-legend').innerHTML = '<i class="k-target"></i> cible · <i class="k-var"></i> variables';
     };
   };
@@ -54,7 +58,7 @@
   // Étiquettes placées à la main pour ne pas se chevaucher : [dx, dy] du coin haut gauche.
   const TAGPOS = {22: [-160, -30], 35: [-160, -14], 29: [-160, 0], 16: [20, -62], 0: [-70, 26]};
   const tag = (X, Y, a, txt) => `<g transform="translate(${X(a.x2) + (TAGPOS[a.id] || [-70, -58])[0]},${Y(a.x1) + (TAGPOS[a.id] || [-70, -58])[1]})"><rect width="140" height="28" rx="8" fill="#fff" stroke="#e9e3d8"/><text x="70" y="19" text-anchor="middle" font-size="13" fill="${INK}">${txt}</text></g>`;
-  const card = (x, y, lines, col = INK) => `<g transform="translate(${x},${y})"><rect width="250" height="${lines.length * 24 + 16}" rx="10" fill="#faf6ef" stroke="#e9e3d8"/>${lines.map((l, i) => `<text x="14" y="${28 + i * 24}" font-size="15" fill="${i ? INK : col}" font-weight="${i ? 400 : 700}">${l}</text>`).join('')}</g>`;
+  const card = (x, y, lines, col = INK, w = 250) => `<g transform="translate(${x},${y})"><rect width="${w}" height="${lines.length * 24 + 16}" rx="10" fill="#faf6ef" stroke="#e9e3d8"/>${lines.map((l, i) => `<text x="14" y="${28 + i * 24}" font-size="15" fill="${i ? INK : col}" font-weight="${i ? 400 : 700}">${l}</text>`).join('')}</g>`;
   const LBL = (X, Y) => EX.map(a => tag(X, Y, a, `${fr(a.x2, 1)} cm · ${fr(a.x1, 1)} kg`)).join('');
 
   const chapters = [
@@ -64,7 +68,7 @@
           const mark = table(ctx);
           ctx.predict([['poids', 'poids'], ['pelage', 'pelage'], ['espece', 'espèce'], ['n', 'n°']], {truth: 'espece',
             reveal: () => mark('espece', ['poids', 'pelage']),
-            feedback: () => 'La <mark>cible</mark> est ce que l’on veut prédire : l’espèce. Le poids et le pelage sont les <mark>variables</mark> (entrées).'});
+            feedback: () => 'La <mark>cible</mark> y est ce que l’on veut prédire : l’espèce. Le poids et le pelage sont les <mark>variables</mark> x₁, x₂ (entrées). Chaque ligne i est un exemple (xᵢ, yᵢ).'});
         }},
       {title: 'Et le numéro ?', prompt: 'Le n° identifie l’animal dans le fichier. Faut-il s’en servir comme variable pour prédire l’espèce ?',
         render(ctx) {
@@ -77,7 +81,7 @@
           const mark = table(ctx);
           ctx.predict([['clf', 'Classification'], ['reg', 'Régression']], {truth: 'reg',
             reveal: () => mark('poids', ['pelage', 'espece']),
-            feedback: () => 'Cible numérique (des kg) : <mark>régression</mark>. Cible catégorie (chat / chien) : <mark>classification</mark>. Les mêmes données servent plusieurs problèmes.'});
+            feedback: () => 'Maintenant y = poids et x = pelage. Cible numérique (des kg) : <mark>régression</mark>. Cible catégorie (chat / chien) : <mark>classification</mark>. Les mêmes données servent plusieurs problèmes.'});
         }}
     ]},
     {title: 'Supervisé ou non supervisé', minutes: 10, goal: 'Supervisé : la cible est connue dans les exemples. Non supervisé : pas de cible, on cherche une structure.', steps: [
@@ -118,7 +122,7 @@
           const lineC = (c, col, lab) => `<line x1="${X(0)}" x2="${X(25)}" y1="${Y(c)}" y2="${Y(c)}" stroke="${col}" stroke-width="3"/><text x="${X(25)}" y="${Y(c) - 8}" text-anchor="end" font-size="14" font-weight="700" fill="${col}">${lab}</text>`;
           ctx.estimate({label: 'poids prédit', values: Array.from({length: 81}, (_, i) => r1(3 + i * .1)), value: 10, format: v => fr(v, 1) + ' kg', truth: BASE, close: (v, t) => Math.abs(v - t) <= .4,
             onInput: c => st.show('guess', lineC(c, MUTED, 'votre valeur')),
-            reveal: () => st.show('marks', sorted.map((a, i) => `<line x1="${X(i + .8)}" x2="${X(i + .8)}" y1="${Y(a.x1)}" y2="${Y(BASE)}" stroke="${BAD}" stroke-width="2" opacity=".55"/>`).join('') + lineC(BASE, ACT, 'moyenne : ' + fr(BASE, 1) + ' kg')),
+            reveal: () => st.show('marks', sorted.map((a, i) => `<line x1="${X(i + .8)}" x2="${X(i + .8)}" y1="${Y(a.x1)}" y2="${Y(BASE)}" stroke="${BAD}" stroke-width="2" opacity=".55"/>`).join('') + lineC(BASE, ACT, 'moyenne : ' + fr(BASE, 1) + ' kg') + card(90, 40, ['Baseline', 'ŷᵢ = ȳ = (1/n) Σ yᵢ', `= ${fr(BASE, 1)} kg pour tout i`], ACT, 260)),
             feedback: () => `La moyenne des poids, ${fr(BASE, 1)} kg, équilibre les écarts au-dessus et au-dessous : c’est la <mark>baseline</mark> de la régression.`});
         }},
       {title: 'La baseline des classes', prompt: 'Un refuge : 12 chats et 4 chiens. Un modèle paresseux répond « chat » pour tous, la classe la plus fréquente. Quel taux de bonnes réponses ?',
@@ -135,34 +139,58 @@
             feedback: () => '12 bonnes réponses sur 16 = 75 %, sans rien apprendre… et aucun chien reconnu. C’est la <mark>baseline</mark> de la classification : un modèle utile doit faire mieux.'});
         }}
     ]},
-    {title: 'La droite et les résidus', minutes: 25, goal: 'Une droite prédit le poids à partir du pelage ; le résidu est l’écart vertical : réel − prédit.', stage: regStage, steps: [
+    {title: 'La droite et les résidus', minutes: 25, goal: 'Une droite ŷ = w·x + b prédit le poids ; le résidu eᵢ = yᵢ − ŷᵢ est l’écart vertical. Elle suppose linéarité et erreurs régulières.', stage: regStage, steps: [
       {title: 'Quelle droite ?', prompt: 'Chaque point est un animal : pelage en abscisse, poids en ordonnée. Quelle droite prédit le mieux le poids ?',
         render(ctx) {
           const st = ctx.stage; st.clear(); const {X, Y} = scatter(st);
           st.show('cands', drawLine(X, Y, () => BASE, MUTED, 'A', '6 6') + drawLine(X, Y, x => 11 - x, MUTED, 'B', '6 6') + drawLine(X, Y, x => 4 + .8 * x, MUTED, 'C', '6 6'));
           ctx.predict([['A', 'A : horizontale'], ['B', 'B : descend'], ['C', 'C : monte']], {truth: 'B',
-            reveal: () => { st.clear('cands'); st.show('line', drawLine(X, Y, x => 11 - x, ACT, 'poids ≈ 11 − pelage')); st.show('marks', resid(X, Y, train, line, {labels: false})); },
-            feedback: () => 'Les animaux à poil long (les chats) sont plus légers : la droite descend. Les moindres carrés donnent 10,6 − 0,86 × pelage ; on l’arrondit à <mark>11 − pelage</mark> pour calculer. A est la baseline.'});
-        },
-        details: String.raw`<p>Droite des moindres carrés sur les 24 animaux : \(\hat w=-0{,}86\), \(\hat b=10{,}6\). Elle minimise \(\sum_i (y_i-\hat y_i)^2\). La droite arrondie \(11-x\) a presque la même erreur (MAE 1,95 kg contre 1,93 kg).</p>`},
+            reveal: () => { st.clear('cands'); st.show('line', drawLine(X, Y, x => 11 - x, ACT, 'poids ≈ 11 − pelage')); st.show('marks', resid(X, Y, train, line, {labels: false}));
+              st.show('cards', card(500, 30, ['Le modèle : ŷ = w · x + b', 'w, b minimisent Σ (yᵢ − ŷᵢ)²', 'moindres carrés :', '  w = −0,86 ; b = 10,6', 'arrondi : w = −1 ; b = 11'], ACT, 240)); },
+            feedback: () => 'Pente w : −1 kg par cm de pelage (les chats, à poil long, sont plus légers). Ordonnée à l’origine b : 11 kg, le poids prédit à pelage 0. La droite arrondie <mark>ŷ = 11 − x</mark> est presque aussi bonne que celle des moindres carrés (MAE 1,95 kg contre 1,93 kg). A est la baseline.'});
+        }},
       {title: 'Lire un résidu', prompt: `Ce chien : pelage ${fr(big.x2, 1)} cm, poids ${fr(big.x1, 1)} kg. La droite prédit 11 − ${fr(big.x2, 1)} = ${fr(line(big), 1)} kg. Quel est son résidu ?`,
         render(ctx) {
-          const st = ctx.stage; st.clear('cands', 'marks'); const {X, Y} = scatter(st, {focus: EX});
+          const st = ctx.stage; st.clear('cands', 'marks', 'cards'); const {X, Y} = scatter(st, {focus: EX});
           st.show('line', drawLine(X, Y, x => 11 - x, ACT, 'poids ≈ 11 − pelage'));
           st.show('labels', tag(X, Y, big, `${fr(big.x2, 1)} cm · ${fr(big.x1, 1)} kg`));
           const e = r1(big.x1 - line(big));
           ctx.predict([['+', sign(e) + ' kg'], ['-', sign(-e) + ' kg'], ['p', fr(line(big), 1) + ' kg']], {truth: '+',
-            reveal: () => st.show('marks', resid(X, Y, [big], line)),
+            reveal: () => { st.show('marks', resid(X, Y, [big], line)); st.show('cards', card(470, 40, ['Résidu : eᵢ = yᵢ − ŷᵢ', `= ${fr(big.x1, 1)} − ${fr(line(big), 1)} = ${sign(e)} kg`], ACT)); },
             feedback: () => `Résidu = réel − prédit = ${fr(big.x1, 1)} − ${fr(line(big), 1)} = <mark>${sign(e)} kg</mark>. Positif : la droite sous-estime ce chien.`});
         }},
       {title: 'Cinq résidus', prompt: 'Voici 5 animaux avec leur pelage et leur poids. Lequel la droite prédit-elle le moins bien ?',
         render(ctx) {
-          const st = ctx.stage; st.clear('marks'); const {X, Y} = scatter(st, {focus: EX});
+          const st = ctx.stage; st.clear('marks', 'cards'); const {X, Y} = scatter(st, {focus: EX});
           st.show('line', drawLine(X, Y, x => 11 - x, ACT, 'poids ≈ 11 − pelage')); st.show('labels', LBL(X, Y));
           const others = EX.filter(a => a !== big).sort((a, b) => Math.abs(r1(b.x1 - line(b))) - Math.abs(r1(a.x1 - line(a))));
           ctx.predict([['big', desc(big)], ['o1', desc(others[0])], ['o2', desc(others[1])]], {truth: 'big',
             reveal: () => st.show('marks', resid(X, Y, EX, line)),
             feedback: () => `Résidus : ${eL.map(sign).join(' · ')} kg. Positif : la droite sous-estime ; négatif : elle surestime. Le plus grand écart est ${sign(r1(big.x1 - line(big)))} kg.`});
+        }}
+      ,{title: 'Quand une droite convient-elle ?', prompt: 'Trois nuages, une droite ajustée sur chacun. Pour lequel le modèle linéaire est-il adapté ?',
+        render(ctx) {
+          const st = ctx.stage; st.clear(); st.hide();
+          // Trois petits nuages déterministes : courbe, entonnoir, nuage régulier.
+          const pw = 220, ph = 200, top = 40, xs = Array.from({length: 13}, (_, k) => k / 12);
+          const jit = k => [0.06, -0.05, 0.03, -0.07, 0.05, -0.02, 0.07, -0.06, 0.02, -0.04, 0.06, -0.03, 0.04][k];
+          const sets = [
+            ['A', xs.map((x, k) => [x, 0.15 + 3.2 * (x - .5) ** 2 + jit(k) * .4]), 'courbe'],
+            ['B', xs.map((x, k) => [x, 0.25 + 0.5 * x + jit(k) * 7 * x]), 'entonnoir'],
+            ['C', xs.map((x, k) => [x, 0.2 + 0.6 * x + jit(k)]), 'régulier']];
+          const fit = P => { const mx = P.reduce((s, p) => s + p[0], 0) / P.length, my = P.reduce((s, p) => s + p[1], 0) / P.length;
+            const w = P.reduce((s, p) => s + (p[0] - mx) * (p[1] - my), 0) / P.reduce((s, p) => s + (p[0] - mx) ** 2, 0); return [w, my - w * mx]; };
+          let svg = '';
+          sets.forEach(([lab, P], k) => {
+            const ox = 30 + k * (pw + 25), X = x => ox + 10 + x * (pw - 20), Y = y => top + ph - 10 - y * (ph - 30), [w, b] = fit(P);
+            svg += `<rect x="${ox}" y="${top}" width="${pw}" height="${ph}" rx="12" fill="#fff" stroke="#e9e3d8"/><text x="${ox + 14}" y="${top + 26}" font-size="18" font-weight="700" fill="${INK}">${lab}</text>` +
+              P.map(p => `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="5" fill="#2f62a3" opacity=".8"/>`).join('') +
+              `<line x1="${X(0)}" y1="${Y(b)}" x2="${X(1)}" y2="${Y(w + b)}" stroke="${ACT}" stroke-width="3"/>`;
+          });
+          st.show('labels', svg);
+          ctx.predict([['A', 'A'], ['B', 'B'], ['C', 'C']], {truth: 'C',
+            reveal: () => st.show('cards', card(30, 262, ['Hypothèses du modèle linéaire  y = w·x + b + ε', '1. Linéarité : la moyenne de y varie en ligne droite avec x (A la viole).', '2. Variance constante des erreurs ε (B la viole : entonnoir).', '3. Erreurs indépendantes et centrées en 0.', '4. (Pour les intervalles et tests) erreurs à peu près normales.'], ACT, 700)),
+            feedback: () => 'C : points répartis régulièrement autour de la droite. A : la relation est courbe, une droite se trompe de façon systématique. B : les écarts grossissent avec x. On vérifie ces hypothèses en regardant les <mark>résidus</mark> : sans forme, centrés en 0, d’écart régulier.'});
         }}
     ]},
     {title: 'MAE et RMSE', minutes: 20, goal: 'MAE : écart moyen. RMSE : racine de la moyenne des carrés, plus sensible aux grands écarts. Toutes deux en kg.', stage: regStage, steps: [
@@ -171,21 +199,19 @@
           const st = ctx.stage; st.clear('labels'); const {X, Y} = scatter(st, {focus: EX});
           st.show('line', drawLine(X, Y, x => 11 - x, ACT, '')); st.show('marks', resid(X, Y, EX, line));
           ctx.estimate({label: 'MAE', values: Array.from({length: 31}, (_, i) => r1(i * .1)), value: 2.5, format: v => fr(v, 1) + ' kg', truth: r1(MAE_L), close: (v, t) => Math.abs(v - t) <= .15,
-            reveal: () => st.show('cards', card(470, 40, ['MAE', `(${eL.map(v => fr(Math.abs(v), 1)).join(' + ')}) / 5`, `= ${fr(MAE_L, 2)} kg`], ACT)),
+            reveal: () => st.show('cards', card(440, 36, ['MAE = (1/n) Σ |eᵢ|', `= (${eL.map(v => fr(Math.abs(v), 1)).join(' + ')}) / 5`, `= ${fr(MAE_L, 2)} kg`], ACT, 290)),
             feedback: () => `MAE = moyenne des |résidus| = ${fr(MAE_L, 2)} kg : en moyenne, la droite se trompe de ${fr(MAE_L, 1)} kg.`});
-        },
-        details: String.raw`\[\mathrm{MAE}=\frac1n\sum_i |y_i-\hat y_i|\]`},
+        }},
       {title: 'La RMSE', prompt: `On élève les résidus au carré, on fait la moyenne, puis la racine. La RMSE sera-t-elle plus grande ou plus petite que la MAE (${fr(MAE_L, 1)} kg) ?`,
         render(ctx) {
           const st = ctx.stage; st.clear('labels'); const {X, Y} = scatter(st, {focus: EX});
           st.show('line', drawLine(X, Y, x => 11 - x, ACT, '')); st.show('marks', resid(X, Y, EX, line));
-          st.show('cards', card(470, 40, ['MAE', `= ${fr(MAE_L, 2)} kg`], ACT));
+          st.show('cards', card(440, 36, ['MAE = (1/n) Σ |eᵢ|', `= ${fr(MAE_L, 2)} kg`], ACT, 290));
           const sq = eL.map(v => fr(r2(v * v), 2));
           ctx.predict([['gt', 'Plus grande'], ['eq', 'Égale'], ['lt', 'Plus petite']], {truth: 'gt',
-            reveal: () => st.show('cards', card(470, 40, ['MAE', `= ${fr(MAE_L, 2)} kg`], ACT) + card(470, 130, ['RMSE', `carrés : ${sq.join(' · ')}`, `√(${fr(r2(eL.reduce((s, v) => s + v * v, 0)), 2)} / 5) ≈ ${fr(RMSE_L, 2)} kg`], ACT)),
+            reveal: () => st.show('cards', card(440, 36, ['MAE = (1/n) Σ |eᵢ|', `= ${fr(MAE_L, 2)} kg`], ACT, 290) + card(440, 116, ['RMSE = √( (1/n) Σ eᵢ² )', `eᵢ² : ${sq.join(' · ')}`, `= √(${fr(r2(eL.reduce((s, v) => s + v * v, 0)), 2)} / 5) ≈ ${fr(RMSE_L, 2)} kg`], ACT, 290)),
             feedback: () => `RMSE ≈ ${fr(RMSE_L, 2)} kg &gt; MAE = ${fr(MAE_L, 2)} kg. Les carrés grossissent les grands écarts : on a toujours RMSE ≥ MAE.`});
-        },
-        details: String.raw`\[\mathrm{RMSE}=\sqrt{\frac1n\sum_i (y_i-\hat y_i)^2}\]`},
+        }},
       {title: 'Battre la baseline', prompt: `La baseline prédit ${fr(BASE, 1)} kg pour tous. Sur ces 5 animaux, qui fait la plus petite erreur ?`,
         render(ctx) {
           const st = ctx.stage; st.clear('cards', 'labels'); const {X, Y} = scatter(st, {focus: EX});
@@ -209,7 +235,7 @@
         }},
       {title: 'Ce que vous avez fait', free: true, recapOpen: true, prompt: 'En une séance :',
         render(ctx) {
-          ctx.visual.innerHTML = '<ul class="lab-recap"><li>identifié une cible et des variables ;</li><li>distingué classification, régression et non supervisé ;</li><li>construit une baseline : la moyenne, la classe majoritaire ;</li><li>lu une droite et ses résidus (réel − prédit) ;</li><li>calculé MAE et RMSE, et vu la RMSE réagir à une valeur extrême.</li></ul>';
+          ctx.visual.innerHTML = '<ul class="lab-recap"><li>identifié une cible et des variables ;</li><li>distingué classification, régression et non supervisé ;</li><li>construit une baseline : la moyenne, la classe majoritaire ;</li><li>lu une droite ŷ = w·x + b et ses résidus eᵢ = yᵢ − ŷᵢ ;</li><li>vérifié quand une droite convient : linéarité, variance constante, erreurs indépendantes ;</li><li>calculé MAE et RMSE, et vu la RMSE réagir à une valeur extrême.</li></ul>';
           ctx.extra.innerHTML = '<p class="lab-next"><a class="lab-btn" href="index.html#td/td01">Ouvrir le TD 1 →</a> <a class="lab-link" href="index.html#cm01">Notes du cours</a></p>';
           ctx.say('good', 'Le TD 1 reprend ces calculs à la main sur de nouveaux animaux.');
         }}
