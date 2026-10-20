@@ -202,12 +202,14 @@
   function route(){
     if(!presentation.hidden)closePresentation();
     reset(cleanups);cleanStory(main);closeMenu();
-    // Adresse propre, comme SID34 : …/mlf110/ pour le plan (sans index.html ni #cours).
-    if(/\/index\.html$/.test(location.pathname)||location.hash==='#cours'||location.hash==='#')history.replaceState(null,'',location.pathname.replace(/index\.html$/,'')+(location.hash==='#cours'||location.hash==='#'?'':location.hash));
+    // Adresse propre, comme SID34 : …/mlf110/ (sans index.html) ouvre la séance en cours ; #cours garde le plan.
+    if(/\/index\.html$/.test(location.pathname))history.replaceState(null,'',location.pathname.replace(/index\.html$/,'')+location.hash);
     let hash;try{hash=decodeURIComponent(location.hash.slice(1));}catch{hash='cours';}
     const [key,sub]=hash.split('/');
     if(key==='td'){const td=tds.find(x=>x.id===sub);td&&soon(td)?soonPage('TD '+String(td.number).padStart(2,'0'),td.title,tdCm(td)):td?tdPage(td):tdIndex();}
     else if(key==='ressources')resourcesPage();
+    else if(!key){const S=window.MLF110Schedule,open=lessons.filter(l=>!soon(l)&&(!S||S.isReleased(l.number)));const cur=open[open.length-1];cur?lessonPage(cur):home();}
+    else if(key==='cours')home();
     else {const lesson=lessons.find(x=>x.id===key);lesson&&soon(lesson)?soonPage('Séance '+String(lesson.number).padStart(2,'0'),lesson.title,lesson.number):lesson?lessonPage(lesson,sub):home();}
     renderNav();math(main);if(!sub)window.scrollTo(0,0);
     main.focus({preventScroll:true});
