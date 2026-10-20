@@ -35,7 +35,7 @@
       card.innerHTML = '<div class="oral-card-head"><span class="oral-face">' + theme.face + '</span><span class="oral-theme">' + escape(theme.name) + '</span>' +
         '<span class="oral-timer"><strong>' + clock() + '</strong><button type="button" class="as-button oral-start">Démarrer</button></span></div>' +
         '<p class="oral-q">' + escape(q.q) + '</p><p class="oral-relance"><span>Relance</span>' + escape(q.relance) + '</p>' +
-        '<details class="oral-attendus"><summary>Attendus</summary><p>' + escape(q.attendus) + '</p></details>';
+        '<div class="oral-attendus"><strong>Attendus</strong><p>' + escape(q.attendus) + '</p></div>';
       const start = card.querySelector('.oral-start'), time = card.querySelector('.oral-timer strong');
       start.addEventListener('click', () => {
         if (timer) { stop(); start.textContent = 'Reprendre'; return; }

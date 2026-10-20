@@ -201,3 +201,9 @@ body,.ml-presentation,.presentation-canvas,.presentation-chrome{background:var(-
 .lesson-slide.is-extra{background:var(--paper-2);border-radius:12px;padding-left:18px;padding-right:18px}
 .lesson-slide.is-extra .slide-label span{color:#7b1e2e}
 .lesson-plan li small{color:var(--muted)}
+/* TD : tout ouvert (docs/DESIGN.md, « rien de replié ») ; les résumés deviennent des titres. */
+.td-content.open-flow details > summary{pointer-events:none;cursor:default;list-style:none}
+.td-content.open-flow details > summary::-webkit-details-marker{display:none}
+.td-content.open-flow details > summary::after,.td-content.open-flow details > summary::before{display:none!important}
+.td-content.open-flow .td-reveal > summary{font-weight:700;color:#7b1e2e}
+.oral-attendus{margin-top:10px}.oral-attendus strong{display:block;font-size:13px;color:#7b1e2e}
