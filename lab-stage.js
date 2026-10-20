@@ -31,7 +31,7 @@
       hide(ids) { (ids || [...nodes.keys()]).forEach(id => { const g = nodes.get(id); if (g) g.style.opacity = 0; }); },
       only(ids) { const keep = new Set(ids); nodes.forEach((g, id) => { if (!keep.has(id)) g.style.opacity = 0; }); },
       dim(ids, o = .25) { ids.forEach(id => { const g = nodes.get(id); if (g) g.style.opacity = o; }); },
-      show(name, html, {below = false} = {}) { const g = layer(name, below); g.innerHTML = html; void g.getBoundingClientRect(); g.style.opacity = 1; return g; },
+      show(name, html, {below = false} = {}) { const g = layer(name, below); g.innerHTML = html; window.SID34Math?.render?.(g); void g.getBoundingClientRect(); g.style.opacity = 1; return g; },
       clear(...names) { (names.length ? names : Object.keys(layers)).forEach(n => { if (layers[n]) layers[n].style.opacity = 0; }); },
       axes(name, o) {
         const [x0, y0, x1, y1] = o.box, X = v => x0 + (v - o.x[0]) / (o.x[1] - o.x[0]) * (x1 - x0), Y = v => y1 - (v - o.y[0]) / (o.y[1] - o.y[0]) * (y1 - y0);
