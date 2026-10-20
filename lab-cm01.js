@@ -121,14 +121,18 @@
             reveal: () => st.show('marks', sorted.map((a, i) => `<line x1="${X(i + .8)}" x2="${X(i + .8)}" y1="${Y(a.x1)}" y2="${Y(BASE)}" stroke="${BAD}" stroke-width="2" opacity=".55"/>`).join('') + lineC(BASE, ACT, 'moyenne : ' + fr(BASE, 1) + ' kg')),
             feedback: () => `La moyenne des poids, ${fr(BASE, 1)} kg, équilibre les écarts au-dessus et au-dessous : c’est la <mark>baseline</mark> de la régression.`});
         }},
-      {title: 'La baseline des classes', prompt: 'Pour l’espèce : 12 chats, 12 chiens. On répond toujours la classe la plus fréquente. Quel taux de bonnes réponses ?',
+      {title: 'La baseline des classes', prompt: 'Un refuge : 12 chats et 4 chiens. Un modèle paresseux répond « chat » pour tous, la classe la plus fréquente. Quel taux de bonnes réponses ?',
         render(ctx) {
           const st = ctx.stage; st.clear();
-          const sorted = [...train].sort((a, b) => a.y - b.y || a.id - b.id), cw = (W - 80) / 8;
-          sorted.forEach((a, i) => st.put(a.id, {x: 40 + cw * (i % 8 + .5), y: 80 + 100 * Math.floor(i / 8), s: 2.2}));
-          ctx.estimate({label: 'bonnes réponses', values: Array.from({length: 11}, (_, i) => i * 10), value: 80, format: v => v + ' %', truth: 50,
-            reveal: () => st.show('marks', sorted.map((a, i) => a.y ? `<circle cx="${40 + cw * (i % 8 + .5)}" cy="${80 + 100 * Math.floor(i / 8)}" r="28" fill="none" stroke="${BAD}" stroke-width="3"/>` : '').join('')),
-            feedback: () => 'Toujours « chat » : 50 %. Un modèle de classification utile doit dépasser ce niveau.'});
+          const P = [...train.filter(a => !a.y), ...train.filter(a => a.y).slice(0, 4)], cw = (W - 80) / 8;
+          const pos = P.map((a, i) => [40 + cw * (i % 8 + .5), 110 + 150 * Math.floor(i / 8)]);
+          st.only(P.map(a => a.id)); P.forEach((a, i) => st.put(a.id, {x: pos[i][0], y: pos[i][1], s: 2.2}));
+          st.show('labels', P.map((a, i) => `<text x="${pos[i][0]}" y="${pos[i][1] + 46}" text-anchor="middle" font-size="13" fill="${MUTED}">prédit : chat</text>`).join(''));
+          ctx.estimate({label: 'bonnes réponses', values: Array.from({length: 21}, (_, i) => i * 5), value: 50, format: v => v + ' %', truth: 75, close: (v, t) => Math.abs(v - t) <= 5,
+            reveal: () => st.show('marks', P.map((a, i) => a.y
+              ? `<circle cx="${pos[i][0]}" cy="${pos[i][1]}" r="28" fill="none" stroke="${BAD}" stroke-width="3"/><text x="${pos[i][0] + 22}" y="${pos[i][1] - 20}" font-size="20" font-weight="700" fill="${BAD}">✗</text>`
+              : `<text x="${pos[i][0] + 22}" y="${pos[i][1] - 20}" font-size="18" font-weight="700" fill="#2f7d4f">✓</text>`).join('')),
+            feedback: () => '12 bonnes réponses sur 16 = 75 %, sans rien apprendre… et aucun chien reconnu. C’est la <mark>baseline</mark> de la classification : un modèle utile doit faire mieux.'});
         }}
     ]},
     {title: 'La droite et les résidus', minutes: 25, goal: 'Une droite prédit le poids à partir du pelage ; le résidu est l’écart vertical : réel − prédit.', stage: regStage, steps: [
