@@ -207,3 +207,4 @@ body,.ml-presentation,.presentation-canvas,.presentation-chrome{background:var(-
 .td-content.open-flow details > summary::after,.td-content.open-flow details > summary::before{display:none!important}
 .td-content.open-flow .td-reveal > summary{font-weight:700;color:#7b1e2e}
 .oral-attendus{margin-top:10px}.oral-attendus strong{display:block;font-size:13px;color:#7b1e2e}
+.td-figure{margin:14px 0 6px}.td-figure svg{width:100%;max-width:640px;height:auto;display:block}.td-figure figcaption{font-size:13px;color:var(--muted);margin-top:4px}
