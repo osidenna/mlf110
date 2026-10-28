@@ -1,21 +1,20 @@
 /* MLF110 · CM 02 — Régression multiple et préparation des données.
    Suite du CM 1 : plusieurs variables, fit/predict, validation et analyse des erreurs,
-   encodage, valeurs manquantes, mise à l'échelle et fuite, puis la perte qui choisit le centre.
-   Fil rouge : huit logements à Nouakchott (surface, distance au centre, état, loyer en milliers d'ouguiyas).
+   une variable numérique de plus (l'âge), valeurs manquantes, mise à l'échelle et fuite, puis la perte qui choisit le centre.
+   Fil rouge : huit logements à Nouakchott (surface, distance au centre, âge, loyer en milliers d'ouguiyas).
    Nombres calculés ici et vérifiés par scripts/check-labs.py. */
 (function () {
   'use strict';
   const L = window.Lab, fr = L.fr;
   const W = 760, H = 430, BAD = '#b4532a', ACT = '#7b1e2e', MUTED = '#858b96', INK = '#1d2433', BLUE = '#4e79a7';
-  const ECOL = {neuf: BLUE, 'rénové': '#c99a2e', ancien: MUTED};
   const r1 = v => Math.round(v * 10) / 10, r2 = v => Math.round(v * 100) / 100;
   const sum = xs => xs.reduce((t, v) => t + v, 0), mean = xs => sum(xs) / xs.length;
   const median = xs => { const s = [...xs].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 
-  // Huit logements d'apprentissage : surface (m²), distance au centre (km), état, loyer (milliers de MRU par mois).
-  const F = [[60, 2, 'neuf', 15.2], [70, 5, 'ancien', 9.3], [80, 3, 'rénové', 16.1], [100, 8, 'ancien', 11.2],
-    [110, 4, 'neuf', 21.7], [120, 10, 'rénové', 13.8], [140, 7, 'ancien', 20.4], [150, 12, 'neuf', 17.8]]
-    .map(([s, d, e, y], i) => ({i: i + 1, s, d, e, y}));
+  // Huit logements d'apprentissage : surface (m²), distance au centre (km), âge (années depuis la construction ou la dernière rénovation), loyer (milliers de MRU par mois).
+  const F = [[60, 2, 2, 15.2], [70, 5, 30, 9.3], [80, 3, 8, 16.1], [100, 8, 25, 11.2],
+    [110, 4, 3, 21.7], [120, 10, 10, 13.8], [140, 7, 22, 20.4], [150, 12, 1, 17.8]]
+    .map(([s, d, a, y], i) => ({i: i + 1, s, d, a, y}));
   const n = F.length, S = F.map(f => f.s), Dk = F.map(f => f.d), Y = F.map(f => f.y), ONE = F.map(() => 1);
   // Moindres carrés : résoudre XᵀX β = Xᵀy (pivot de Gauss).
   const ols = (cols, yv = Y) => {
@@ -30,13 +29,10 @@
   const pred = f => B[0] + B[1] * f.s + B[2] * f.d, E = F.map(f => f.y - pred(f));
   const YB = mean(Y), SST = sum(Y.map(v => (v - YB) ** 2)), SSR = sum(E.map(v => v * v)), R2 = 1 - SSR / SST;
   const RSD = corr(S, Dk);
-  const ETATS = ['neuf', 'rénové', 'ancien'], gm = e => mean(F.filter(f => f.e === e).map(f => f.y - pred(f)));
-  const NEUF = F.map(f => +(f.e === 'neuf')), RENO = F.map(f => +(f.e === 'rénové'));
-  const BE = ols([ONE, S, Dk, NEUF, RENO]);
-  const predE = f => BE[0] + BE[1] * f.s + BE[2] * f.d + BE[3] * (f.e === 'neuf') + BE[4] * (f.e === 'rénové');
-  const R2E = 1 - sum(F.map(f => (f.y - predE(f)) ** 2)) / SST;
-  const MED_S = median(S), NEW = {d: 6, e: 'neuf'};                       // nouveau logement, surface manquante
-  const P0 = predE({...NEW, s: 0}), PM = predE({...NEW, s: MED_S});
+  const AGE = F.map(f => f.a), BA = ols([ONE, S, Dk, AGE]);              // avec l'âge
+  const predA = f => BA[0] + BA[1] * f.s + BA[2] * f.d + BA[3] * f.a;
+  const MED_S = median(S), NEW = {d: 6, a: 2};                       // nouveau logement, surface manquante
+  const P0 = predA({...NEW, s: 0}), PM = predA({...NEW, s: MED_S});
   const sd = xs => { const m = mean(xs); return Math.sqrt(mean(xs.map(v => (v - m) ** 2))); };
   const MUS = mean(S), SDS = sd(S), MUD = mean(Dk), SDD = sd(Dk);
   const VILLA = 60, Y9 = [...Y, VILLA];
@@ -47,7 +43,6 @@
   const tn = (v, d = 1) => fr(v, d).replace(',', '{,}').replace(/[\u00a0\u202f]/g, String.raw`\,`);
   const sgn = (v, d = 2) => (v < 0 ? ' - ' : ' + ') + tn(Math.abs(v), d);
   const MODEL = M(String.raw`\hat y = ` + tn(B[0], 2) + sgn(B[1], 3) + String.raw`\,x_1` + sgn(B[2]) + String.raw`\,x_2`);
-  const MODEL_E = M(String.raw`\hat y = ` + tn(BE[0], 2) + sgn(BE[1], 3) + String.raw`\,x_1` + sgn(BE[2]) + String.raw`\,x_2` + sgn(BE[3]) + String.raw`\,\mathbb{1}_{\text{neuf}}` + sgn(BE[4]) + String.raw`\,\mathbb{1}_{\text{rénové}}`);
 
   // ---------- Dessins ----------
   const card = (x, y, lines, col = INK, w = 250, h = 0) => `<foreignObject x="${x}" y="${y}" width="${w}" height="${h || lines.length * 32 + 22 + (lines.some(l => l.startsWith('\\[')) ? 110 : 0)}"><div xmlns="http://www.w3.org/1999/xhtml" class="lab-fcard" style="--c:${col}">${lines.map((l, i) => `<div${i ? '' : ' class="h"'}>${l}</div>`).join('')}</div></foreignObject>`;
@@ -55,16 +50,13 @@
   const seg = (x1, y1, x2, y2, col, w = 3, dash = '') => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"${dash ? ` stroke-dasharray="${dash}"` : ''}/>`;
   const dot = (x, y, col = INK, r = 8) => `<g><circle class="cm02-dot-halo" cx="${x}" cy="${y}" r="${r + 3}" fill="${col}"/><circle class="cm02-dot" cx="${x}" cy="${y}" r="${r}" fill="${col}" stroke="#fff" stroke-width="2"/></g>`;
   const txt = (x, y, t, {col = MUTED, size = 13, anchor = 'start', bold = false} = {}) => `<text class="cm02-label" x="${x}" y="${y}" style="font-size:${Math.max(size, 16)}px" fill="${col}" text-anchor="${anchor}"${bold ? ' font-weight="700"' : ''}>${t}</text>`;
-  // Point d'un logement : couleur de son état, numéro à côté (relie le graphique au tableau).
-  const ptE = (x, y, f) => dot(x, y, ECOL[f.e]) + txt(x + 10, y - 9, f.i, {size: 12, col: INK});
-  const legend = () => ETATS.map((e, k) => dot(250 + k * 100, 410, ECOL[e], 5) + txt(262 + k * 100, 414, e, {size: 12})).join('');
   const BOX = [66, 36, 718, 340];
   const vsSurface = st => st.axes('axes', {x: [50, 160], y: [6, 24], box: BOX, xt: [60, 80, 100, 120, 140, 160], yt: [8, 12, 16, 20, 24], xl: 'surface (m²)', yl: 'loyer (milliers MRU)'});
   const vsDist = st => st.axes('axes', {x: [0, 13], y: [6, 24], box: BOX, xt: [0, 2, 4, 6, 8, 10, 12], yt: [8, 12, 16, 20, 24], xl: 'distance au centre (km)', yl: 'loyer (milliers MRU)'});
   const vsPred = st => st.axes('axes', {x: [8, 24], y: [8, 24], box: BOX, xt: [8, 12, 16, 20, 24], yt: [8, 12, 16, 20, 24], xl: 'loyer prédit ŷ', yl: 'loyer réel y'});
 
   // Tableau des logements (HTML dans le plateau) ; mark(cible, variables) colore les colonnes et écrit la notation.
-  const COLS = [['i', 'n°', f => f.i], ['s', 'surface (m²)', f => f.s], ['d', 'distance (km)', f => fr(f.d, 0)], ['e', 'état', f => f.e], ['y', 'loyer', f => typeof f.y === 'number' ? fr(f.y, 1) : f.y]];
+  const COLS = [['i', 'n°', f => f.i], ['s', 'surface (m²)', f => f.s], ['d', 'distance (km)', f => fr(f.d, 0)], ['a', 'âge (ans)', f => f.a], ['y', 'loyer', f => typeof f.y === 'number' ? fr(f.y, 1) : f.y]];
   const tableHTML = (rows, {target = '', vars = [], extra = null} = {}) => {
     const cols = extra ? [...COLS, ...extra] : COLS;
     const nt = k => k === target ? M('y') : vars.includes(k) ? M('x_' + (vars.indexOf(k) + 1)) : '';
@@ -128,7 +120,7 @@
   const resultPanel = (text,label='Résultat') => `<div class="cm02-console"><span>${label}</span><pre>${esc(text)}</pre></div>`;
   const codeVisual = (source,output) => `<div class="cm02-code-visual">${codePanel(source)}<div class="cm02-code-output">${output}</div></div>`;
   const processFlow = labels => `<div class="cm02-code-flow">${labels.map((t,i)=>`<div><small>0${i+1}</small><strong>${t}</strong></div>`).join('')}</div>`;
-  const scoreTable = (names,reveal=true) => `<div class="cm02-table-wrap"><table class="lab-data cm02-score-table"><thead><tr><th>Modèle</th><th>MAE<br>train</th><th>MAE<br>val.</th><th>RMSE<br>val.</th><th>R²<br>train</th><th>R²<br>val.</th></tr></thead><tbody>${names.map(name=>{const a=P.scores[name].train,v=P.scores[name].validation;return `<tr${name==='etat'?' class="cm02-score-best"':''}><td>${{baseline:'Moyenne',numeric:'Surface + distance',etat:'+ état'}[name]}</td><td>${fr(a.mae,2)}</td><td>${reveal?fr(v.mae,2):'?'}</td><td>${reveal?fr(v.rmse,2):'?'}</td><td>${fr(a.r2,3)}</td><td>${reveal?fr(v.r2,3):'?'}</td></tr>`;}).join('')}</tbody></table></div><p class="cm02-hint">MAE et RMSE : milliers de MRU. Validation : mêmes six annonces.</p>`;
+  const scoreTable = (names,reveal=true) => `<div class="cm02-table-wrap"><table class="lab-data cm02-score-table"><thead><tr><th>Modèle</th><th>MAE<br>train</th><th>MAE<br>val.</th><th>RMSE<br>val.</th><th>R²<br>train</th><th>R²<br>val.</th></tr></thead><tbody>${names.map(name=>{const a=P.scores[name].train,v=P.scores[name].validation;return `<tr${name==='age'?' class="cm02-score-best"':''}><td>${{baseline:'Moyenne',numeric:'Surface + distance',age:'+ âge'}[name]}</td><td>${fr(a.mae,2)}</td><td>${reveal?fr(v.mae,2):'?'}</td><td>${reveal?fr(v.rmse,2):'?'}</td><td>${fr(a.r2,3)}</td><td>${reveal?fr(v.r2,3):'?'}</td></tr>`;}).join('')}</tbody></table></div><p class="cm02-hint">MAE et RMSE : milliers de MRU. Validation : mêmes six annonces.</p>`;
 
   const chapters = [
     {title: 'Plusieurs variables', minutes: 9, question: 'Comment prédire avec deux variables à la fois, et comment lire chaque coefficient ?', goal: 'Avec ' + M('p') + ' variables : ' + M(String.raw`\hat y = b + w_1x_1 + \dots + w_px_p`) + ', soit ' + M('p + 1') + ' paramètres. Chaque ' + M('w_j') + ' se lit « à autres variables égales » ; une variable seule peut tromper.', stage, steps: [
@@ -258,35 +250,37 @@
     ]},
     {title:'Lire les erreurs pour améliorer',minutes:16,goal:'Relier code, erreurs et graphiques : chercher une information manquante, tester une amélioration sur la même validation et examiner les grandes erreurs. Un motif guide une action ; aucun voyant ne garantit un bon modèle.',steps:[
       {title:'Une information manque-t-elle ?',noStage:true,
-        intuition:'Un résidu positif signifie un loyer sous-estimé ; négatif, surestimé. Regrouper les erreurs peut faire apparaître une information oubliée.',
-        prompt:'Sur la validation, quel état est sous-estimé en moyenne ?',
-        render(ctx){const draw=on=>{const g=P.residual_groups;let fig=plot({x:[0,3],y:[-6,3],xt:[.5,1.5,2.5],fx:v=>ETATS[Math.floor(v)],yt:[-6,-3,0,3],residual:true,xl:'État du logement',yl:'Réel − prédit',unit:'milliers de MRU'},(X,Yc)=>seg(X(0),Yc(0),X(3),Yc(0),MUTED,1.5,'5 5')+ETATS.map((e,k)=>P.validation.map((r,i)=>({r,i})).filter(f=>f.r[2]===e).map((f,j)=>dot(X(k+.5)+(j?12:-12),Yc(f.r[3]-P.predictions.numeric.validation[f.i]),ECOL[e],7)).join('')+(on?seg(X(k+.2),Yc(g[e]),X(k+.8),Yc(g[e]),ACT,3):'')).join(''));
-            ctx.visual.innerHTML=codeVisual('audit = validation.assign(predit=y_hat)\naudit["residu"] = audit.loyer - audit.predit\naudit.groupby("etat").residu.mean()',fig+(on?`<div class="cm02-group-means">${ETATS.map(e=>`<span>${e}<b>${P.residual_groups[e]>0?'+':''}${fr(P.residual_groups[e],2)}</b></span>`).join('')}</div>`:''));
+        intuition:'Un résidu positif signifie un loyer sous-estimé ; négatif, surestimé. On trace les résidus contre une variable que le modèle n’utilise pas encore : l’âge du logement.',
+        prompt:'Résidus du modèle surface + distance, sur la validation, selon l’âge du logement. Que montre le nuage ?',
+        render(ctx){const pv=P.predictions.numeric.validation,pts=P.validation.map((r,i)=>({a:r[2],e:r[3]-pv[i],i}));
+          const ma=mean(pts.map(q=>q.a)),me=mean(pts.map(q=>q.e)),sl=sum(pts.map(q=>(q.a-ma)*(q.e-me)))/sum(pts.map(q=>(q.a-ma)**2)),rr=corr(pts.map(q=>q.a),pts.map(q=>q.e));
+          const draw=on=>{const fig=plot({x:[0,35],y:[-6,3],xt:[0,5,10,15,20,25,30,35],yt:[-6,-3,0,3],residual:true,xl:'Âge du logement · années depuis la construction ou la rénovation',yl:'Réel − prédit',unit:'milliers de MRU · 6 annonces de validation'},(X,Yc)=>(on?seg(X(0),Yc(me-sl*ma),X(35),Yc(me+sl*(35-ma)),ACT,3):'')+pts.map(q=>dot(X(q.a),Yc(q.e),BLUE,7)+txt(X(q.a)+10,Yc(q.e)-9,'V'+(q.i+1),{size:13})).join(''));
+            ctx.visual.innerHTML=codeVisual('audit = validation.assign(predit=y_hat)\naudit["residu"] = audit.loyer - audit.predit\nplt.scatter(audit.age, audit.residu)\nplt.axhline(0, linestyle="--")',fig+(on?`<p class="cm02-hint">Tendance : ${fr(sl,2)} millier de MRU par année · corrélation r ≈ ${fr(rr,2)}.</p>`:''));
           };draw(false);
-          ctx.predict(ETATS.map(e=>[e,e]),{truth:'neuf',reveal:()=>draw(true),feedback:()=> 'Neuf : '+fr(P.residual_groups.neuf,2)+' en moyenne ; ancien : '+fr(P.residual_groups.ancien,2)+'. Le modèle ignore peut-être l’état. <mark>Ajoutons cette information, puis comparons les erreurs.</mark> Prudence : deux annonces par état seulement, et la moyenne « ancien » vient surtout de V2 (résidu '+fr(P.audit[0].residu,1)+').'});
+          ctx.predict([['down','Les logements anciens sont surestimés : les résidus baissent avec l’âge'],['flat','Rien : l’âge n’a aucun lien avec les erreurs'],['up','Les logements anciens sont sous-estimés']],{truth:'down',reveal:()=>draw(true),feedback:()=> 'Plus le logement est ancien, plus le modèle le <mark>surestime</mark> : l’âge porte une information que la surface et la distance n’ont pas. <mark>Ajoutons cette variable, puis comparons les erreurs sur la même validation.</mark> Prudence : six annonces seulement, et V2 (résidu '+fr(P.audit[0].residu,1)+') pèse beaucoup.'});
         }},
-      {title:'Ajouter l’état dans le code',noStage:true,
-        intuition:'ColumnTransformer prépare les colonnes numériques et les catégories séparément. Le pipeline relie cette préparation à la régression.',
-        prompt:'L’encodage doit-il apprendre ses catégories sur toutes les annonces ?',
-        render(ctx){const draw=on=>{ctx.visual.innerHTML=codeVisual('FEATURES = NUM + ["etat"]\nprep = ColumnTransformer([\n  ("num", SimpleImputer(strategy="median"),\n   ["surface", "distance"]),\n  ("cat", OneHotEncoder(drop="first"),\n   ["etat"])\n])\nwith_state = make_pipeline(prep, LinearRegression())\nwith_state.fit(train[FEATURES], train.loyer)',on?processFlow(['Surface et distance','Neuf / rénové (0 ou 1)','Régression'])+resultPanel('4 colonnes préparées\n+ une constante estimée','Ce qui entre dans la régression'):processFlow(['Chiffres','Catégories','Un seul modèle']));};draw(false);
-          ctx.predict([['n','Non : fit sur train uniquement'],['o','Oui : sinon une catégorie vue seulement en validation serait inconnue']],{truth:'n',reveal:()=>draw(true),feedback:()=> 'Le pipeline apprend la médiane et les catégories sur <mark>l’apprentissage seul</mark>. Les mêmes transformations s’appliquent ensuite aux autres annonces. Une catégorie inconnue n’est pas devinée : on la contrôle à l’entrée (le CM le reprend dans « Hors du domaine »).'});
+      {title:'Ajouter l’âge dans le code',noStage:true,
+        intuition:'Ajouter une variable numérique, c’est ajouter une colonne à X. Le pipeline complète les cases vides avec la médiane apprise sur train, puis ajuste la régression.',
+        prompt:'Avec surface, distance et âge, combien de nombres la régression apprend-elle ?',
+        render(ctx){const draw=on=>{ctx.visual.innerHTML=codeVisual('FEATURES = NUM + ["age"]\nwith_age = make_pipeline(\n    SimpleImputer(strategy="median"),\n    LinearRegression()\n)\nwith_age.fit(train[FEATURES], train.loyer)',on?processFlow(['Surface, distance, âge','Médiane apprise sur train','Régression'])+resultPanel('coef_ : 3 valeurs\nintercept_ : 1 valeur','Ce que la régression apprend'):processFlow(['3 colonnes dans X','Cases vides complétées','Un seul modèle']));};draw(false);
+          ctx.predict([[3,'3'],[4,'4'],[6,'6']],{truth:4,reveal:()=>draw(true),feedback:()=> 'Une variable de plus, un coefficient de plus : '+M('b')+', '+M('w_1')+', '+M('w_2')+' et '+M('w_3')+'. Le modèle reste '+M(String.raw`\hat y=b+w_1x_1+w_2x_2+w_3x_3`)+'. La médiane d’imputation s’apprend sur <mark>l’apprentissage seul</mark>.'});
         }},
       {title:'La modification aide-t-elle ?',noStage:true,
         intuition:'Un nouveau paramètre peut rendre l’apprentissage meilleur sans améliorer les annonces réservées. On garde le même lot et la même métrique pour comparer.',
-        prompt:'R² d’apprentissage : '+fr(P.scores.numeric.train.r2,2)+' sans l’état, '+fr(P.scores.etat.train.r2,3)+' avec. Sur quoi décider de garder l’état ?',
-        render(ctx){let revealed=false;const draw=on=>{revealed=on;ctx.visual.innerHTML=codeVisual('pred2 = with_state.predict(validation[FEATURES])\nmean_absolute_error(y_val, pred2)\n\nplt.scatter(pred2, y_val - pred2)\nplt.axhline(0, linestyle="--")',scoreTable(['baseline','numeric','etat'],on));};draw(false);
-          ctx.predict([['v','Sur la MAE des mêmes six annonces de validation'],['t','Sur le R² d’apprentissage : '+fr(P.scores.etat.train.r2,3)+' est presque parfait']],{truth:'v',reveal:()=>draw(true),feedback:()=> 'MAE de validation : '+fr(P.scores.numeric.validation.mae,2)+' → <mark>'+fr(P.scores.etat.validation.mae,2)+' milliers de MRU</mark>. L’état améliore ce lot ; il ne rend pas le modèle parfait. Les plus grandes erreurs restent à comprendre. Le test final demeure réservé.'});
-          ctx.seg([['scores','Scores'],['numeric','Résidus sans état'],['etat','Résidus avec état']],{value:'scores',into:ctx.controls,onChange:name=>{
+        prompt:'R² d’apprentissage : '+fr(P.scores.numeric.train.r2,2)+' sans l’âge, '+fr(P.scores.age.train.r2,3)+' avec. Sur quoi décider de garder l’âge ?',
+        render(ctx){let revealed=false;const draw=on=>{revealed=on;ctx.visual.innerHTML=codeVisual('pred2 = with_age.predict(validation[FEATURES])\nmean_absolute_error(y_val, pred2)\n\nplt.scatter(pred2, y_val - pred2)\nplt.axhline(0, linestyle="--")',scoreTable(['baseline','numeric','age'],on));};draw(false);
+          ctx.predict([['v','Sur la MAE des mêmes six annonces de validation'],['t','Sur le R² d’apprentissage : '+fr(P.scores.age.train.r2,3)+' est presque parfait']],{truth:'v',reveal:()=>draw(true),feedback:()=> 'MAE de validation : '+fr(P.scores.numeric.validation.mae,2)+' → <mark>'+fr(P.scores.age.validation.mae,2)+' milliers de MRU</mark>. L’âge améliore ce lot ; il ne rend pas le modèle parfait. Les plus grandes erreurs restent à comprendre. Le test final demeure réservé.'});
+          ctx.seg([['scores','Scores'],['numeric','Résidus sans âge'],['age','Résidus avec âge']],{value:'scores',into:ctx.controls,onChange:name=>{
             const output=ctx.visual.querySelector('.cm02-code-output');
-            if(name==='scores'){output.innerHTML=scoreTable(['baseline','numeric','etat'],revealed);return;}
+            if(name==='scores'){output.innerHTML=scoreTable(['baseline','numeric','age'],revealed);return;}
             const pred=P.predictions[name].validation;
-            output.innerHTML=plot({h:180,x:[8,24],y:[-6,3],xt:[8,12,16,20,24],yt:[-6,-3,0,3],residual:true,xl:'Loyer prédit · milliers de MRU',yl:'Réel − prédit',unit:'même échelle · milliers de MRU'},(X,Yc)=>seg(X(8),Yc(0),X(24),Yc(0),MUTED,1.5,'5 5')+P.validation.map((r,i)=>dot(X(pred[i]),Yc(r[3]-pred[i]),ECOL[r[2]],7)).join(''))+`<p class="cm02-residual-legend">${ETATS.map(e=>`<span><i style="background:${ECOL[e]}"></i>${e}</span>`).join('')}</p>`;
+            output.innerHTML=plot({h:180,x:[8,24],y:[-6,3],xt:[8,12,16,20,24],yt:[-6,-3,0,3],residual:true,xl:'Loyer prédit · milliers de MRU',yl:'Réel − prédit',unit:'même échelle · milliers de MRU'},(X,Yc)=>seg(X(8),Yc(0),X(24),Yc(0),MUTED,1.5,'5 5')+P.validation.map((r,i)=>dot(X(pred[i]),Yc(r[3]-pred[i]),BLUE,7)+txt(X(pred[i])+10,Yc(r[3]-pred[i])-9,'V'+(i+1),{size:13})).join(''));
           }});
         }},
       {title:'Ouvrir les plus grandes erreurs',noStage:true,
         intuition:'Trier les erreurs permet de retourner aux annonces qui demandent une explication. Une grande erreur ne prouve pas une faute de saisie.',
         prompt:'La première annonce du tableau doit-elle être supprimée pour améliorer le score ?',
-        render(ctx){const top=P.audit.slice(0,3);ctx.visual.innerHTML=codeVisual('audit["erreur_absolue"] = audit.residu.abs()\naudit.sort_values(\n  "erreur_absolue", ascending=False\n).head(3)',`<table class="lab-data"><thead><tr><th>Annonce</th><th>Réel</th><th>Prédit</th><th>|Erreur|</th></tr></thead><tbody>${top.map(r=>`<tr><td>${r.surface} m² · ${r.distance} km<br><small>${r.etat}</small></td><td>${fr(r.loyer,1)}</td><td>${fr(r.predit,2)}</td><td><b>${fr(r.erreur_absolue,2)}</b></td></tr>`).join('')}</tbody></table><p class="cm02-hint">Modèle initial, validation · loyers et erreurs en milliers de MRU.</p>`);
+        render(ctx){const top=P.audit.slice(0,3);ctx.visual.innerHTML=codeVisual('audit["erreur_absolue"] = audit.residu.abs()\naudit.sort_values(\n  "erreur_absolue", ascending=False\n).head(3)',`<table class="lab-data"><thead><tr><th>Annonce</th><th>Réel</th><th>Prédit</th><th>|Erreur|</th></tr></thead><tbody>${top.map(r=>`<tr><td>${r.surface} m² · ${r.distance} km<br><small>${r.age} ans</small></td><td>${fr(r.loyer,1)}</td><td>${fr(r.predit,2)}</td><td><b>${fr(r.erreur_absolue,2)}</b></td></tr>`).join('')}</tbody></table><p class="cm02-hint">Modèle initial, validation · loyers et erreurs en milliers de MRU.</p>`);
           ctx.predict([['i','Inspecter la saisie, les unités et les informations manquantes'],['d','Supprimer la ligne : le score remontera']],{truth:'i',feedback:()=> 'Vérifier le loyer, la surface, les unités, le quartier ou d’autres caractéristiques. Si la donnée est valide, elle révèle une limite du modèle. <mark>Retirer les cas difficiles uniquement pour améliorer la métrique fausse l’évaluation.</mark>'});
         }},
       {title:'Un motif, une action',noStage:true,
@@ -296,28 +290,18 @@
           ctx.predict([['n','Non : c’est une piste à tester sur validation'],['o','Oui : le graphique prouve que le modèle suivant sera meilleur']],{truth:'n',reveal:()=>draw(true),feedback:()=> 'La boucle est <mark>observer → proposer une modification → réajuster sur train → comparer sur la même validation</mark>. Si l’on multiplie les essais, il faut renforcer le protocole d’évaluation ; le CM 4 approfondit cette question.'});
         }}
     ]},
-    {title: 'Préparer les données', minutes: 12, question: 'Comment donner au modèle des données qu’il sait lire, sans tricher ?', goal: 'Un modèle ne lit que des nombres : encoder les catégories, compléter les manques, mettre à l’échelle. Chaque réglage s’apprend sur l’apprentissage seul.', stage, steps: [
-      {title: 'Encoder une catégorie', noStage:true,
-        intuition: 'Une indicatrice vaut 1 si le logement appartient à une catégorie, 0 sinon. La catégorie retirée sert de référence.',
-        prompt: 'Trois états, et une constante dans le modèle : combien d’indicatrices faut-il garder ?',
-        render(ctx) {
-          const draw=on=>{
-            ctx.visual.innerHTML=`<div class="cm02-encoding"><div class="cm02-table-wrap"><table class="lab-data"><thead><tr><th>Logement</th><th>État</th><th>Neuf</th><th>Rénové</th><th class="${on?'cm02-retired':''}">Ancien</th></tr></thead><tbody>${F.map(f=>`<tr><td>${f.i}</td><td>${f.e}</td><td>${+(f.e==='neuf')}</td><td>${+(f.e==='rénové')}</td><td class="${on?'cm02-retired':''}">${+(f.e==='ancien')}</td></tr>`).join('')}</tbody></table></div><div class="cm02-recipe"><span class="quiz-kicker">Une information redondante</span><p>Pour chaque logement, une seule indicatrice vaut 1.</p><p class="cm02-equation">${M(String.raw`\mathbb{1}_{\text{neuf}}+\mathbb{1}_{\text{rénové}}+\mathbb{1}_{\text{ancien}}=1`)}</p><p>${on?'La colonne « ancien » se déduit des deux autres. On la retire et on garde la constante.':'Les trois colonnes additionnées donnent une colonne de 1 : c’est déjà la constante.'}</p><p><b>${on?'Deux indicatrices + la constante.':'Combien de colonnes suffisent ?'}</b></p></div></div>`;window.SID34Math?.render?.(ctx.visual);
-          };
-          draw(false);
-          ctx.predict([[1,'1'],[2,'2'],[3,'3']],{truth:2,reveal:()=>draw(true),feedback:()=> 'Avec les trois indicatrices et la constante, une colonne est redondante et les coefficients ne sont pas uniques. <mark>OneHotEncoder(drop="first")</mark> garde deux indicatrices pour trois catégories. Ici, « ancien » devient la référence.'});
-        }},
-      {title:'Relier les colonnes à coef_',noStage:true,
-        intuition:'Le pipeline transforme trois colonnes brutes en quatre colonnes numériques. Les noms permettent de lire chaque coefficient dans le bon ordre.',
-        prompt:'Que représente le coefficient de cat__etat_neuf ?',
-        render(ctx){ctx.visual.innerHTML=codeVisual('prep = with_state.named_steps["columntransformer"]\nnames = prep.get_feature_names_out()\ncoef = with_state.named_steps["linearregression"].coef_\npd.Series(coef, index=names)',`<table class="lab-data"><thead><tr><th>Colonne préparée</th><th>Coefficient</th></tr></thead><tbody>${P.feature_names.map((name,i)=>`<tr><td><code>${name}</code></td><td>${fr(P.coef.etat[i],3)}</td></tr>`).join('')}</tbody></table><p class="cm02-hint">Unités brutes, sans StandardScaler dans cette version. Référence : « ancien ».</p>`);
-          ctx.predict([['s','Le supplément prédit pour neuf par rapport à ancien, autres variables fixées'],['p','La probabilité que le logement soit neuf'],['l','Le loyer complet de tous les logements neufs']],{truth:'s',feedback:()=> '<mark>'+fr(BE[3],2)+' milliers de MRU de plus</mark> que la référence « ancien », à surface et distance égales. Un coefficient d’indicatrice est un supplément conditionnel, pas un loyer absolu ni une probabilité.'});
+    {title: 'Préparer les données', minutes: 12, question: 'Comment préparer les variables sans tricher ?', goal: 'Lire chaque coefficient avec son unité, compléter les manques, mettre à l’échelle. Chaque réglage s’apprend sur l’apprentissage seul.', stage, steps: [
+      {title:'Lire le coefficient de l’âge',noStage:true,
+        intuition:'coef_ suit l’ordre des colonnes de X. Chaque coefficient se lit dans l’unité de sa variable, les autres variables restant fixées.',
+        prompt:'Que représente le coefficient de la colonne age ?',
+        render(ctx){ctx.visual.innerHTML=codeVisual('coef = with_age.named_steps["linearregression"].coef_\npd.Series(coef, index=FEATURES)',`<table class="lab-data"><thead><tr><th>Colonne</th><th>Coefficient</th><th>Unité</th></tr></thead><tbody>${P.feature_names.map((name,i)=>`<tr><td><code>${name}</code></td><td>${fr(P.coef.age[i],3)}</td><td>${['milliers de MRU par m²','milliers de MRU par km','milliers de MRU par année'][i]}</td></tr>`).join('')}</tbody></table><p class="cm02-hint">Unités brutes, sans StandardScaler dans cette version.</p>`);
+          ctx.predict([['s','La variation du loyer prédit pour une année de plus, à surface et distance égales'],['p','L’âge moyen des logements'],['l','Le loyer d’un logement neuf']],{truth:'s',feedback:()=> 'Une année de plus : <mark>'+fr(-BA[3],2)+' millier de MRU de moins</mark>, soit environ '+fr(-BA[3]*1000,0)+' MRU par mois, à surface et distance égales. Avec l’âge, le coefficient de distance passe de '+fr(B[2],2)+' à '+fr(BA[2],2)+' : chaque coefficient dépend des autres variables du modèle.'});
         }},
       {title:'Une valeur manquante',noStage:true,
         intuition:'La médiane fournit une valeur de remplacement calculée sur l’apprentissage. Elle ne prétend pas retrouver la surface réelle du logement.',
-        prompt:'Une annonce neuve à 6 km n’indique pas sa surface. Quelle valeur donner au modèle ?',
+        prompt:'Une annonce de 2 ans, à 6 km, n’indique pas sa surface. Quelle valeur donner au modèle ?',
         render(ctx){
-          const row=on=>[{i:9,s:on?'<mark>105 m²</mark>':'<b style="color:'+BAD+'">?</b>',d:6,e:'neuf',y:'à prédire'}];
+          const row=on=>[{i:9,s:on?'<mark>105 m²</mark>':'<b style="color:'+BAD+'">?</b>',d:6,a:2,y:'à prédire'}];
           const draw=on=>{ctx.visual.innerHTML=`<div class="cm02-table-wrap">${tableHTML(row(on))}</div><div class="cm02-imputation"><div><span class="quiz-kicker">Surfaces d’apprentissage, rangées</span><div class="cm02-values">${[...S].sort((a,b)=>a-b).map((v,i)=>`<span class="${on&&(i===3||i===4)?'is-middle':''}">${v}</span>`).join('')}</div><p class="cm02-hint">m²${on?' · les deux valeurs centrales sont 100 et 110':' · huit surfaces connues'}.</p></div><div><span class="quiz-kicker">${on?'Imputation par la médiane':'La valeur de remplacement'}</span><p class="cm02-equation">${on?M(String.raw`\tilde x_1=\frac{100+110}{2}=105\;\text{m}^2`):'Votre choix ?'}</p>${on?'<p>Avec 105 m² : <b>'+fr(PM,1)+'</b> milliers de MRU prédits.<br>Avec 0 m² : <b>'+fr(P0,1)+'</b>, un loyer négatif.</p>':''}</div></div>`;window.SID34Math?.render?.(ctx.visual);};
           draw(false);
           ctx.predict([['med','La médiane des surfaces d’apprentissage'],['zero','0 m²'],['drop','Refuser toute prédiction']],{truth:'med',reveal:()=>draw(true),feedback:()=> 'La médiane donne une estimation exploitable. <mark>0 m² n’est pas une surface plausible</mark> : le modèle extrapole et prédit un loyer négatif. On peut aussi signaler la donnée manquante ou refuser une estimation si le contexte l’exige. La médiane s’apprend sur l’apprentissage seul.'});
@@ -325,8 +309,8 @@
       {title:'StandardScaler : que change le code ?',noStage:true,
         intuition:'StandardScaler change les coordonnées des variables numériques. Il apprend leurs moyennes et écarts-types sur train.',
         prompt:'Standardiser améliore-t-il automatiquement les prédictions de cette régression sans pénalité ?',
-        render(ctx){const draw=on=>{ctx.visual.innerHTML=codeVisual('numeric = make_pipeline(\n    SimpleImputer(strategy="median"),\n    StandardScaler()\n)\n# Même encodage ; même LinearRegression\nscaled = make_model(scale=True).fit(\n    train[FEATURES], train.loyer\n)',on?`<table class="lab-data"><thead><tr><th>Variable</th><th>Unité brute</th><th>Par écart-type</th></tr></thead><tbody>${['surface','distance'].map((v,i)=>`<tr><td>${v}</td><td>${fr(P.coef.etat[i],3)}</td><td>${fr(P.coef.scaled[i],3)}</td></tr>`).join('')}</tbody></table><p class="cm02-hint">Prédictions identiques sur les six annonces de validation ; erreur inchangée.</p>`:processFlow(['Apprendre μ et σ sur train','Transformer avec ces réglages','Ajuster la régression']));};draw(false);
-          ctx.predict([['n','Non : seule l’unité des coefficients change'],['o','Oui : standardiser suffit à rendre le modèle meilleur']],{truth:'n',reveal:()=>draw(true),feedback:()=> 'Sans pénalité, les prédictions OLS sont <mark>les mêmes</mark>, à l’arrondi numérique près. Les coefficients numériques changent d’unité. La mise à l’échelle devient importante pour des modèles sensibles aux échelles, dont la régularisation du CM 3 ; elle ne remplace pas une bonne variable ni une bonne évaluation.'});
+        render(ctx){const draw=on=>{ctx.visual.innerHTML=codeVisual('numeric = make_pipeline(\n    SimpleImputer(strategy="median"),\n    StandardScaler()\n)\n# Même LinearRegression\nscaled = make_model(scale=True).fit(\n    train[FEATURES], train.loyer\n)',on?`<table class="lab-data"><thead><tr><th>Variable</th><th>Unité brute</th><th>Par écart-type</th></tr></thead><tbody>${['surface','distance','âge'].map((v,i)=>`<tr><td>${v}</td><td>${fr(P.coef.age[i],3)}</td><td>${fr(P.coef.scaled[i],3)}</td></tr>`).join('')}</tbody></table><p class="cm02-hint">Prédictions identiques sur les six annonces de validation ; erreur inchangée.</p>`:processFlow(['Apprendre μ et σ sur train','Transformer avec ces réglages','Ajuster la régression']));};draw(false);
+          ctx.predict([['n','Non : seule l’unité des coefficients change'],['o','Oui : standardiser suffit à rendre le modèle meilleur']],{truth:'n',reveal:()=>draw(true),feedback:()=> 'Sans pénalité, les prédictions OLS sont <mark>les mêmes</mark>, à l’arrondi numérique près. Les coefficients changent d’unité. La mise à l’échelle devient importante pour des modèles sensibles aux échelles, dont la régularisation du CM 3 ; elle ne remplace pas une bonne variable ni une bonne évaluation.'});
         }},
       {title:'La fuite',noStage:true,
         intuition:'Un score ne mesure plus une vraie découverte si les données réservées ont déjà servi à préparer le modèle.',
@@ -350,40 +334,39 @@
         }}
     ]},
     {title: 'Du modèle à une estimation utilisable', minutes: 11, question: 'Comment passer du code à une estimation utilisable sur de nouvelles annonces ?', goal: 'Figer le choix avant le test final, livrer tout le pipeline, contrôler les entrées et suivre les erreurs. Une métrique moyenne ne garantit pas chaque prédiction.', steps: [
-      {title: 'Tout dans un pipeline', intuition: `Un pipeline est une chaîne de montage : chaque étape reçoit la sortie de la précédente, et toute la chaîne se règle en une fois, sur l’apprentissage seulement.`, prompt: 'Ce pipeline impute et standardise surface et distance, puis encode l’état avec ' + M(String.raw`\texttt{drop="first"}`) + '. Combien de colonnes reçoit la régression ?',
+      {title: 'Tout dans un pipeline', intuition: `Un pipeline est une chaîne de montage : chaque étape reçoit la sortie de la précédente, et toute la chaîne se règle en une fois, sur l’apprentissage seulement.`, prompt: 'Ce pipeline impute puis standardise surface, distance et âge. Combien de colonnes reçoit la régression ?',
         render(ctx) {
-          ctx.visual.innerHTML = `<pre class="lab-code">prep = ColumnTransformer([
-  ("num", make_pipeline(SimpleImputer(strategy="median"),
-                        StandardScaler()), ["surface", "distance"]),
-  ("cat", OneHotEncoder(drop="first"), ["etat"])])
-model = make_pipeline(prep, LinearRegression())
+          ctx.visual.innerHTML = `<pre class="lab-code">FEATURES = ["surface", "distance", "age"]
+model = make_pipeline(SimpleImputer(strategy="median"),
+                      StandardScaler(),
+                      LinearRegression())
 model.fit(train[FEATURES], train.loyer)   # préparation : train seul
 model.predict(validation[FEATURES])      # comparer sans réajuster
 joblib.dump(model, "loyers.joblib")   # un seul objet à livrer</pre>`;
-          ctx.predict([[3, '3'], [4, '4'], [5, '5']], {truth: 4,
-            feedback: () => 'Surface et distance standardisées, plus ' + M(String.raw`\mathbb{1}_{\text{neuf}}`) + ' et ' + M(String.raw`\mathbb{1}_{\text{rénové}}`) + ' (« ancien » est retiré, premier par ordre alphabétique) : 4 colonnes, et ' + M(String.raw`\texttt{LinearRegression}`) + ' ajoute ' + M('b') + '. Le TP 2 construit ce pipeline.'});
+          ctx.predict([[2, '2'], [3, '3'], [4, '4']], {truth: 3,
+            feedback: () => 'Trois colonnes, complétées puis standardisées : surface, distance et âge. ' + M(String.raw`\texttt{LinearRegression}`) + ' ajoute ' + M('b') + '. Le TP 2 construit ce pipeline.'});
         }},
-      {title: 'Ce que l’on livre', intuition: `Le modèle ne vit pas seul : les nouvelles annonces arrivent brutes (texte, cases vides). Ce qu’on livre doit faire tout le trajet, de l’annonce brute au loyer estimé.`, prompt: 'L’équipe web de l’agence va appeler le modèle à chaque nouvelle annonce. Que faut-il leur livrer ?',
+      {title: 'Ce que l’on livre', intuition: `Le modèle ne vit pas seul : les nouvelles annonces arrivent brutes (cases vides, unités d’origine). Ce qu’on livre doit faire tout le trajet, de l’annonce brute au loyer estimé.`, prompt: 'L’équipe web de l’agence va appeler le modèle à chaque nouvelle annonce. Que faut-il leur livrer ?',
         render(ctx) {
           const flow = on => `<div class="lab-flow">${['annonces passées', 'pipeline.fit', 'validation', 'joblib.dump', 'API : predict(annonce)', 'suivi de l’erreur'].map((t, k) => `<span class="${on && k >= 1 && k <= 4 ? 'on' : ''}">${t}</span>`).join('<i>→</i>')}</div>`;
           ctx.visual.innerHTML = flow(false);
           ctx.predict([['p', 'Le pipeline entier (préparation + régression)'], ['c', 'Les coefficients et la constante dans un tableau'], ['n', 'Le notebook du TP']], {truth: 'p',
             reveal: () => (ctx.visual.innerHTML = flow(true)),
-            feedback: () => 'Les coefficients seuls oublient la médiane d’imputation, ' + M(String.raw`\mu`) + ', ' + M(String.raw`\sigma`) + ' et l’encodage : une annonce brute donnerait un résultat faux. On livre <mark>un seul objet</mark>, le pipeline ajusté, versionné avec la date et les données qui l’ont produit.'});
+            feedback: () => 'Les coefficients seuls oublient la médiane d’imputation, ' + M(String.raw`\mu`) + ', ' + M(String.raw`\sigma`) + ' : une annonce brute donnerait un résultat faux. On livre <mark>un seul objet</mark>, le pipeline ajusté, versionné avec la date et les données qui l’ont produit.'});
         }},
       {title:'Le test final, une seule fois',noStage:true,
-        intuition:'Le modèle avec l’état a été choisi avec la validation. On évalue maintenant ce choix figé sur six autres annonces.',
+        intuition:'Le modèle avec l’âge a été choisi avec la validation. On évalue maintenant ce choix figé sur six autres annonces.',
         prompt:'Une MAE faible sur ces six annonces garantit-elle la même erreur pour tous les futurs logements ?',
-        render(ctx){const draw=on=>{ctx.visual.innerHTML=codeVisual('best = with_state  # choix déjà figé\npred_test = best.predict(test[FEATURES])\n\nmean_absolute_error(test.loyer, pred_test)\nroot_mean_squared_error(test.loyer, pred_test)\nr2_score(test.loyer, pred_test)',on?`<div class="cm02-metrics"><div><small>MAE test</small><strong>${fr(P.final.scores.mae,2)}</strong></div><div><small>RMSE test</small><strong>${fr(P.final.scores.rmse,2)}</strong></div><div><small>R² test</small><strong>${fr(P.final.scores.r2,3)}</strong></div></div><p class="cm02-hint">MAE et RMSE en milliers de MRU · six annonces fictives. Plus bas qu’en validation ('+fr(P.scores.etat.validation.mae,2)+') : sur six annonces, le hasard du lot pèse beaucoup.</p>`:processFlow(['Choix figé sur validation','Test encore réservé','Bilan final']));};draw(false);
-          ctx.predict([['n','Non : c’est un bilan sur ce petit lot'],['o','Oui : on peut promettre cette erreur à chaque client']],{truth:'n',reveal:()=>draw(true),feedback:()=> 'MAE = '+fr(P.final.scores.mae,2)+' millier de MRU, soit environ '+fr(P.final.scores.mae*1000,0)+' MRU en moyenne <mark>sur ce lot</mark>. Elle est même plus basse qu’en validation ('+fr(P.scores.etat.validation.mae,2)+') : ce lot de six est plutôt facile. Pour la suite, mieux vaut s’attendre à une erreur proche de la validation. Pour une utilisation réelle : davantage de données représentatives, contrôle des entrées et suivi. On ne recommence pas les réglages à partir de ce test.'});
+        render(ctx){const draw=on=>{ctx.visual.innerHTML=codeVisual('best = with_age  # choix déjà figé\npred_test = best.predict(test[FEATURES])\n\nmean_absolute_error(test.loyer, pred_test)\nroot_mean_squared_error(test.loyer, pred_test)\nr2_score(test.loyer, pred_test)',on?`<div class="cm02-metrics"><div><small>MAE test</small><strong>${fr(P.final.scores.mae,2)}</strong></div><div><small>RMSE test</small><strong>${fr(P.final.scores.rmse,2)}</strong></div><div><small>R² test</small><strong>${fr(P.final.scores.r2,3)}</strong></div></div><p class="cm02-hint">MAE et RMSE en milliers de MRU · six annonces fictives. Plus bas qu’en validation ('+fr(P.scores.age.validation.mae,2)+') : sur six annonces, le hasard du lot pèse beaucoup.</p>`:processFlow(['Choix figé sur validation','Test encore réservé','Bilan final']));};draw(false);
+          ctx.predict([['n','Non : c’est un bilan sur ce petit lot'],['o','Oui : on peut promettre cette erreur à chaque client']],{truth:'n',reveal:()=>draw(true),feedback:()=> 'MAE = '+fr(P.final.scores.mae,2)+' millier de MRU, soit environ '+fr(P.final.scores.mae*1000,0)+' MRU en moyenne <mark>sur ce lot</mark>. Elle est même plus basse qu’en validation ('+fr(P.scores.age.validation.mae,2)+') : ce lot de six est plutôt facile. Pour la suite, mieux vaut s’attendre à une erreur proche de la validation. Pour une utilisation réelle : davantage de données représentatives, contrôle des entrées et suivi. On ne recommence pas les réglages à partir de ce test.'});
         }},
       {title: 'Hors du domaine', intuition: `Le modèle n’a vu que des logements de 60 à 150 m². Au-delà, il prolonge la droite là où il n’a vu aucun logement : comme deviner la taille d’un adulte à partir d’enfants seulement.`, prompt: 'Une villa de 400 m² à 3 km. Le premier modèle (surface + distance) annonce ' + M(String.raw`\hat y \approx ` + tn(B[0] + 400 * B[1] + 3 * B[2], 0)) + ' milliers de MRU. Peut-on transmettre ce chiffre ?',
         render(ctx) {
           ctx.visual.innerHTML=Figures.domain(S,400);
           ctx.predict([['n', 'Non : 400 m² est hors des données (60 à 150 m²)'], ['y', 'Oui : la formule s’applique à toute surface']], {truth: 'n',
-            feedback: () => 'C’est une <mark>extrapolation</mark> : rien ne dit que le loyer reste linéaire au-delà de 150 m². En production, on contrôle chaque annonce : variables dans les plages vues à l’apprentissage, catégories connues. Sinon, on renvoie « estimation impossible » à un humain.'});
+            feedback: () => 'C’est une <mark>extrapolation</mark> : rien ne dit que le loyer reste linéaire au-delà de 150 m². En production, on contrôle chaque annonce : variables dans les plages vues à l’apprentissage (surface, distance, âge). Sinon, on renvoie « estimation impossible » à un humain.'});
         }},
-      {title: 'Six mois plus tard', intuition: 'Chaque mois, on mesure la MAE sur les nouvelles annonces dont le vrai loyer est désormais connu. Au départ, 1,4 : proche de la validation (' + fr(P.scores.etat.validation.mae, 2) + ').', prompt: 'La MAE mensuelle passe de 1,4 à 2,4 en six mois. Que vérifier avant de remplacer le modèle ?',
+      {title: 'Six mois plus tard', intuition: 'Chaque mois, on mesure la MAE sur les nouvelles annonces dont le vrai loyer est désormais connu. Au départ, 1,4 : proche de la validation (' + fr(P.scores.age.validation.mae, 2) + ').', prompt: 'La MAE mensuelle passe de 1,4 à 2,4 en six mois. Que vérifier avant de remplacer le modèle ?',
         render(ctx) {
           ctx.visual.innerHTML=Figures.monitor(MAE_MONITOR);
           ctx.predict([['r', 'Vérifier la hausse, puis réentraîner et revalider si nécessaire'], ['k', 'Rien : le R² d’apprentissage était 0,90'], ['c', 'Réentraîner tout de suite sur les annonces du dernier mois']], {truth: 'r',
@@ -393,7 +376,7 @@ joblib.dump(model, "loyers.joblib")   # un seul objet à livrer</pre>`;
     {title: 'Vers le TD 2', minutes: 2, question: 'Que ferez-vous au TD 2 ?', steps: [
       {title: 'Ce que vous avez fait', free: true, recapOpen: true, prompt: 'En une séance :',
         render(ctx) {
-          ctx.visual.innerHTML = '<ul class="lab-recap"><li>préparé X et y, ajusté un modèle avec fit et prédit de nouveaux loyers ;</li><li>interprété coef_ et intercept_ avec les unités et les noms de colonnes ;</li><li>comparé une baseline et deux modèles sur les mêmes annonces de validation ;</li><li>utilisé réel contre prédit, résidus par groupe et grandes erreurs pour proposer une amélioration ;</li><li>encodé, imputé et standardisé dans un pipeline appris sur train seul ;</li><li>figé le choix avant le test final, contrôlé le domaine et préparé le suivi.</li></ul>';
+          ctx.visual.innerHTML = '<ul class="lab-recap"><li>préparé X et y, ajusté un modèle avec fit et prédit de nouveaux loyers ;</li><li>interprété coef_ et intercept_ avec les unités et les noms de colonnes ;</li><li>comparé une baseline et deux modèles sur les mêmes annonces de validation ;</li><li>utilisé réel contre prédit, résidus par groupe et grandes erreurs pour proposer une amélioration ;</li><li>imputé et standardisé dans un pipeline appris sur train seul ;</li><li>figé le choix avant le test final, contrôlé le domaine et préparé le suivi.</li></ul>';
           ctx.extra.innerHTML = '<p class="lab-next"><a class="lab-btn" href="./#td/td02">Ouvrir le TD 2 →</a> <a class="lab-link" href="./#cm02">Notes du cours</a></p>';
           ctx.say('good', 'Le TD 2 reprend ces calculs à la main.');
         }}
