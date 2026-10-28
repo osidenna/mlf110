@@ -35,22 +35,28 @@
     if (course.cover) steps.push({title: course.title, free: true, kind: 'cover', chapter: {title: 'Plan', steps: []}, ci: -1, render: ctx => coverRender(ctx)});
     course.chapters.forEach((ch, ci) => {
       partFirst[ci] = steps.length;
-      if (ch.goal) steps.push({title: ch.title, free: true, kind: 'part', chapter: ch, ci, render: ctx => partRender(ctx, ch, ci)});
+      if (!course.compactChapters && (ch.goal || ch.question)) steps.push({title: ch.title, free: true, kind: 'part', chapter: ch, ci, render: ctx => partRender(ctx, ch, ci)});
       ch.steps.forEach((s, k) => steps.push(Object.assign({}, s, {chapter: ch, ci, k})));
+      // question : la partie s'ouvre sur sa question ; « À retenir » vient après les étapes, pas avant.
+      if (!course.compactChapters && ch.question && ch.goal) steps.push({title: 'À retenir', free: true, kind: 'retain', chapter: ch, ci, render: ctx => retainRender(ctx, ch)});
     });
     function coverRender(ctx) {
       ctx.visual.classList.add('lab-cover');
-      ctx.visual.innerHTML = (course.lead ? `<p class="lab-lead">${course.lead}</p>` : '') +
-        `<ol class="lab-parts">${course.chapters.map((ch, ci) => `<li><button type="button" data-ci="${ci}"><span class="n">${pad2(ci + 1)}</span><span class="t"><strong>${ch.title}</strong>${ch.goal ? `<small>${ch.goal}</small>` : ''}</span><span class="m">${ch.minutes ? ch.minutes + ' min' : ''}</span></button></li>`).join('')}</ol>` + (course.coverAfter || '');
+      ctx.visual.innerHTML = (course.lead ? `<p class="lab-lead">${course.lead}</p>` : '') + (course.coverBefore || '') +
+        `<ol class="lab-parts">${course.chapters.map((ch, ci) => `<li><button type="button" data-ci="${ci}"><span class="n">${pad2(ci + 1)}</span><span class="t"><strong>${ch.title}</strong>${ch.question || ch.goal ? `<small>${ch.question || ch.goal}</small>` : ''}</span><span class="m">${ch.minutes ? ch.minutes + ' min' : ''}</span></button></li>`).join('')}</ol>` + (course.coverAfter || '');
       ctx.visual.querySelectorAll('[data-ci]').forEach(b => b.addEventListener('click', () => go(partFirst[+b.dataset.ci])));
     }
     function partRender(ctx, ch, ci) {
       ctx.visual.classList.add('lab-partcard');
-      ctx.visual.innerHTML = `<p class="lab-goal-line"><b>À retenir</b> ${ch.goal}</p><p class="lab-part-meta">${ch.minutes ? ch.minutes + ' min · ' : ''}${ch.steps.length} étapes</p>` +
+      ctx.visual.innerHTML = (ch.question ? `<p class="lab-goal-line"><b>Question</b> ${ch.question}</p>` : `<p class="lab-goal-line"><b>À retenir</b> ${ch.goal}</p>`) + `<p class="lab-part-meta">${ch.minutes ? ch.minutes + ' min · ' : ''}${ch.steps.length} étapes</p>` +
         `<ol class="lab-part-steps">${ch.steps.map(s => `<li>${s.title}</li>`).join('')}</ol>`;
     }
+    function retainRender(ctx, ch) {
+      ctx.visual.classList.add('lab-partcard');
+      ctx.visual.innerHTML = `<p class="lab-goal-line"><b>À retenir</b> ${ch.goal}</p>`;
+    }
     const eyebrow = s => s.kind === 'cover' ? [course.code, course.date, course.duration || '90 min'].filter(Boolean).join(' · ')
-      : `Partie ${s.ci + 1} / ${nParts} · ${s.chapter.title}` + (s.kind === 'part' ? '' : ` · étape ${s.k + 1} / ${s.chapter.steps.length}`);
+      : `Partie ${s.ci + 1} / ${nParts} · ${s.chapter.title}` + (s.kind === 'part' ? '' : s.kind === 'retain' ? ' · à retenir' : ` · étape ${s.k + 1} / ${s.chapter.steps.length}`);
     const solved = new Set();
     let index = Math.max(0, Math.min(steps.length - 1, parseInt((location.hash.match(/s(\d+)/) || [])[1] || '1', 10) - 1));
     let teardown = [], current = null;
@@ -75,11 +81,12 @@
     back.type = next.type = answer.type = 'button';
     botIn.append(back, answer, next); bottom.append(botIn);
     root.append(top, screen, bottom);
+    const viewport = course.fit ? window.LabViewport?.mount({root, screen, top, bottom}) : null;
 
     const segs = [];
     steps.forEach((s, i) => {
-      if (s.k === 0 && !s.chapter.goal) bar.append(el('div', 'lab-progress-part', `Partie ${s.ci + 1} · ${s.chapter.title}`));
-      const seg = el('button', '', s.kind === 'part' ? `<span>${s.ci + 1}</span>${s.title}` : s.kind === 'cover' ? '<span>·</span>Plan de la séance' : `<span>${s.k + 1}</span>${s.title}`); seg.type = 'button';
+      if (s.k === 0 && (course.compactChapters || !s.chapter.goal)) bar.append(el('div', 'lab-progress-part', `Partie ${s.ci + 1} · ${s.chapter.title}`));
+      const seg = el('button', '', s.kind === 'part' ? `<span>${s.ci + 1}</span>${s.title}` : s.kind === 'cover' ? '<span>·</span>Plan de la séance' : s.kind === 'retain' ? '<span>✓</span>À retenir' : `<span>${s.k + 1}</span>${s.title}`); seg.type = 'button';
       if (s.kind) seg.dataset.kind = s.kind; segs.push(seg);
       seg.title = `${s.chapter.title}${s.chapter.minutes ? ' · ' + s.chapter.minutes + ' min' : ''}`;
       seg.addEventListener('click', () => { outline.open = false; go(i); }); bar.append(seg);
@@ -102,17 +109,22 @@
       screen.innerHTML = '';
       screen.append(el('div', 'lab-eyebrow', eyebrow(s)), el('h1', 'lab-title', s.title));
       screen.dataset.kind = s.kind || 'step';
+      screen.dataset.layout = s.layout || '';
       if (s.prompt) screen.append(el('p', 'lab-prompt', s.prompt));
-      const visual = el('div', 'lab-visual'), controls = el('div', 'lab-controls'), extra = el('div');
+      // intuition : la même idée en mots simples, toujours visible (niveaux de maths différents).
+      if (s.intuition) screen.append(el('p', 'lab-intuition', '<b>En clair</b> ' + s.intuition));
+      const visual = el('div', 'lab-visual'), controls = el('div', 'lab-controls'), extra = el('div', 'lab-extra');
       const feedback = el('div', 'lab-feedback');
       feedback.setAttribute('role', 'status'); feedback.setAttribute('aria-live', 'polite');
       screen.append(visual, controls, extra, feedback);
-      if (s.hint || s.details) {
+      if (s.hint) {
         const help = el('div', 'lab-help');
-        if (s.hint) help.append(el('details', 'lab-details', `<summary>Aide</summary><p>${s.hint}</p>`));
-        if (s.details) help.append(el('details', 'lab-details', `<summary>Comprendre</summary>${s.details}`));
+        help.append(el('details', 'lab-details', `<summary>Aide</summary><p>${s.hint}</p>`));
         screen.append(help); window.SID34Math?.render?.(help);
       }
+      // details : le développement complet, visible (pas replié) une fois la réponse donnée.
+      const deep = s.details ? el(course.detailsDisclosure ? 'details' : 'div', 'lab-deep', (course.detailsDisclosure ? '<summary>Développement et conditions</summary>' : '<b>Pour aller plus loin</b>') + s.details) : null;
+      if (deep) { deep.hidden = !solved.has(index); screen.append(deep); window.SID34Math?.render?.(deep); }
       let unlocked = true, solver = null;
       const setAnswer = () => { answer.hidden = !(solver || s.answer); answer.disabled = solved.has(index); };
       const setNext = () => {
@@ -124,13 +136,13 @@
       const ctx = {
         step: s, visual, controls, extra, solved: solved.has(index), fr, svg, svgPoint, el,
         onCleanup: f => teardown.push(f),
-        unlock() { unlocked = true; solved.add(index); segs[index].className = 'now'; setNext(); setAnswer(); },
+        unlock() { unlocked = true; solved.add(index); if (deep) deep.hidden = false; segs[index].className = 'now'; setNext(); setAnswer(); },
         onSolve(f) { solver = f; setAnswer(); },
         say(kind, html) {
           feedback.className = 'lab-feedback show ' + kind;
           feedback.innerHTML = mascotFor(kind) + `<p>${html}</p>`;
           window.SID34Math?.render?.(feedback);
-          requestAnimationFrame(() => feedback.scrollIntoView?.({block: 'nearest', behavior: 'smooth'}));
+          if (!viewport?.fitted) requestAnimationFrame(() => feedback.scrollIntoView?.({block: 'nearest', behavior: 'smooth'}));
         },
         // Question à choix : chaque mauvaise réponse explique son piège ; deuxième erreur → réponse montrée.
         choices(items, opts = {}) {
@@ -227,6 +239,9 @@
       current = {ctx, get solver() { return solver; }};
       s.render(ctx);
       setAnswer();
+      if (course.compactChapters && !s.kind && s.k === s.chapter.steps.length - 1 && s.chapter.goal) {
+        screen.append(el('aside', 'lab-chapter-summary', '<b>À retenir</b><div>' + s.chapter.goal + '</div>'));
+      }
       // Le bilan reste disponible sans ajouter un dernier écran de texte.
       const recap = s.free && visual.querySelector('.lab-recap');
       if (recap) {
@@ -238,6 +253,7 @@
         visual.classList.add('lab-finish');
       }
       window.SID34Math?.render?.(screen);
+      viewport?.refresh({visual, controls, extra, feedback});
     }
 
     next.addEventListener('click', () => { if (index < steps.length - 1) go(index + 1); else course.onFinish?.(); });

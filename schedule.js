@@ -15,7 +15,7 @@
     start: '2026-10-20',
     skip: [],
     dates: {},
-    released: 1
+    released: 2
   };
 
   const pad = n => String(n).padStart(2, '0');

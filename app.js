@@ -167,11 +167,14 @@
   function lessonPage(lesson, sectionId) {
     current=lesson;document.title=lesson.title+' · MLF110';
     const notes=window.MLF110_PDFS?.[lesson.id]?pdfLink(lesson.id):button('Notes','print',lesson.id,'text-button');
-    main.innerHTML='<div class="content lesson-content compact-lesson"><header class="lesson-header"><div class="eyebrow">MLF110 · CM '+String(lesson.number).padStart(2,'0')+' · 90 MIN</div><h1>'+esc(lesson.title)+'</h1><div class="lesson-actions">'+(LABS.includes(lesson.number)?'<a class="primary-button lab-link" href="'+entry(lesson)+'">Ouvrir le cours</a>':button(icon('present')+'Présenter','present',lesson.id,'secondary-button'))+notes+'</div></header><details class="lesson-plan"><summary>Plan</summary><p class="plan-objective">'+esc(lesson.objective)+'</p><ol>'+lesson.sections.map(s=>'<li'+(s.extra?' class="is-extra"':'')+'><a href="#'+lesson.id+'/'+s.id+'">'+esc(s.title)+'</a>'+(s.minutes?' <small>'+s.minutes+' min</small>':' <small>pour aller plus loin</small>')+'</li>').join('')+'</ol></details><div class="lesson-sections"></div><details class="lesson-check compact-check"><summary>Vérifier sa compréhension</summary><div class="quiz-list"></div></details><div class="related-td"></div>'+sources(lesson)+'<nav class="lesson-pagination" aria-label="Séances précédente et suivante">'+(lesson.number>1?'<a href="#cm'+String(lesson.number-1).padStart(2,'0')+'">'+icon('prev')+'Précédente</a>':'<a href="#cours">'+icon('prev')+'Plan</a>')+(lesson.number<lessons.length?'<a href="#cm'+String(lesson.number+1).padStart(2,'0')+'">Suivante'+icon('next')+'</a>':'<a href="#td">TD'+icon('next')+'</a>')+'</nav>'+footer()+'</div>';
+    main.innerHTML='<div class="content lesson-content compact-lesson"><header class="lesson-header"><div class="eyebrow">MLF110 · CM '+String(lesson.number).padStart(2,'0')+' · 90 MIN</div><h1>'+esc(lesson.title)+'</h1><div class="lesson-actions">'+(LABS.includes(lesson.number)?'<a class="primary-button lab-link" href="'+entry(lesson)+'">Ouvrir le cours</a>':button(icon('present')+'Présenter','present',lesson.id,'secondary-button'))+notes+'</div></header><details class="lesson-plan"><summary>Plan</summary><p class="plan-objective">'+esc(lesson.objective)+'</p><ol>'+lesson.sections.filter(s=>!s.activityOnly).map(s=>'<li'+(s.extra?' class="is-extra"':'')+'><a href="#'+lesson.id+'/'+s.id+'">'+esc(s.title)+'</a>'+(s.minutes?' <small>'+s.minutes+' min</small>':' <small>pour aller plus loin</small>')+'</li>').join('')+'</ol></details><div class="lesson-sections"></div><details class="lesson-check compact-check"><summary>Vérifier sa compréhension</summary><div class="quiz-list"></div></details><div class="related-td"></div>'+sources(lesson)+'<nav class="lesson-pagination" aria-label="Séances précédente et suivante">'+(lesson.number>1?'<a href="#cm'+String(lesson.number-1).padStart(2,'0')+'">'+icon('prev')+'Précédente</a>':'<a href="#cours">'+icon('prev')+'Plan</a>')+(lesson.number<lessons.length?'<a href="#cm'+String(lesson.number+1).padStart(2,'0')+'">Suivante'+icon('next')+'</a>':'<a href="#td">TD'+icon('next')+'</a>')+'</nav>'+footer()+'</div>';
     const target=main.querySelector('.lesson-sections');
+    let visibleSectionIndex=0;
     lesson.sections.forEach((section,index)=>{
+      if(section.activityOnly)return;
+      visibleSectionIndex++;
       const article=document.createElement('article');article.className='lesson-slide'+(section.extra?' is-extra':'');article.id=section.id;
-      article.innerHTML='<div class="slide-label"><span>'+(section.extra?'POUR ALLER PLUS LOIN · HORS SÉANCE':String(lesson.number).padStart(2,'0')+'.'+String(index+1).padStart(2,'0')+(section.minutes?' · '+section.minutes+' MIN':''))+'</span>'+button(icon('present'),'present-section',lesson.id+'/'+index,'icon-button')+'</div><h2>'+esc(section.title)+'</h2>';
+      article.innerHTML='<div class="slide-label"><span>'+(section.extra?'POUR ALLER PLUS LOIN · HORS SÉANCE':String(lesson.number).padStart(2,'0')+'.'+String(visibleSectionIndex).padStart(2,'0')+(section.minutes?' · '+section.minutes+' MIN':''))+'</span>'+button(icon('present'),'present-section',lesson.id+'/'+index,'icon-button')+'</div><h2>'+esc(section.title)+'</h2>';
       compactSection(lesson,section,article);target.appendChild(article);
     });
     (lesson.quiz||[]).forEach((q,i)=>main.querySelector('.quiz-list').appendChild(quizElement(q,i)));
@@ -217,6 +220,7 @@
   }
   function makeDeck(lesson){
     return lesson.sections.flatMap((section,sectionIndex)=>{
+      if(section.activityOnly)return [];
       const chunks=[];let pending=[];
       const flush=()=>{if(pending.length){chunks.push({blocks:pending});pending=[];}};
       const layout=readingLayout(lesson,section);
@@ -295,7 +299,7 @@
       const article=document.createElement('article');article.className='print-lesson';
       article.innerHTML='<header><p class="eyebrow">MLF110 · MASTER DEML · '+(kind==='td'?'TD ':'CM ')+String(item.number).padStart(2,'0')+' · 90 MIN</p><h1>'+esc(item.title)+'</h1><p>'+esc(item.objective)+'</p></header>';
       if(kind==='td')item.parts.forEach((p,i)=>{const el=document.createElement('section');el.className='print-section';const d=window.MLF110TD?.design(p.id),mn=d?window.MLF110TD.minutes(p,d):p.minutes;el.innerHTML='<h2>'+(i+1)+'. '+esc(p.title)+' <small>('+(mn?mn+' min':'pour aller plus loin')+')</small></h2>'+(d?window.MLF110TD.body(p,d,{print:true}):p.prompt);article.appendChild(el);});
-      else item.sections.forEach((s,i)=>{
+      else item.sections.filter(s=>!s.activityOnly).forEach((s,i)=>{
         const el=document.createElement('section');el.className='print-section';el.innerHTML='<h2>'+(i+1)+'. '+esc(s.title)+'</h2>';
         s.blocks.forEach(b=>el.appendChild(renderBlock(b,{print:true},printCleanups)));article.appendChild(el);
       });

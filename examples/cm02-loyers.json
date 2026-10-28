@@ -1,0 +1,7 @@
+{
+  "description": "Données fictives déterministes du CM 2. Plages, catégories et découpages fixés avant la comparaison. Loyers en milliers de MRU par mois.",
+  "columns": ["surface", "distance", "etat", "loyer"],
+  "train": [[60,2,"neuf",15.2],[70,5,"ancien",9.3],[80,3,"rénové",16.1],[100,8,"ancien",11.2],[110,4,"neuf",21.7],[120,10,"rénové",13.8],[140,7,"ancien",20.4],[150,12,"neuf",17.8]],
+  "validation": [[65,3,"neuf",15.0],[85,4,"ancien",10.2],[95,6,"rénové",13.4],[115,6,"neuf",18.7],[130,9,"ancien",15.0],[145,11,"rénové",16.4]],
+  "test": [[75,4,"ancien",11.2],[90,5,"neuf",16.6],[105,7,"rénové",15.0],[125,8,"ancien",15.6],[135,10,"neuf",18.0],[145,9,"rénové",19.8]]
+}

@@ -213,3 +213,4 @@ body,.ml-presentation,.presentation-canvas,.presentation-chrome{background:var(-
 .home-meta{color:var(--muted);font-size:14px;margin:6px 0 0}
 .header-year{font:400 11px/1 var(--sans);color:var(--muted);letter-spacing:.04em;align-self:center}
 .minimal-home .course-row.is-soon h3{color:#6b6f7a;font-weight:400}
+.td-outline .td-index .td-number{grid-column:auto}
