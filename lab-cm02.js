@@ -131,10 +131,6 @@
   const scoreTable = (names,reveal=true) => `<div class="cm02-table-wrap"><table class="lab-data cm02-score-table"><thead><tr><th>Modèle</th><th>MAE<br>train</th><th>MAE<br>val.</th><th>RMSE<br>val.</th><th>R²<br>train</th><th>R²<br>val.</th></tr></thead><tbody>${names.map(name=>{const a=P.scores[name].train,v=P.scores[name].validation;return `<tr${name==='etat'?' class="cm02-score-best"':''}><td>${{baseline:'Moyenne',numeric:'Surface + distance',etat:'+ état'}[name]}</td><td>${fr(a.mae,2)}</td><td>${reveal?fr(v.mae,2):'?'}</td><td>${reveal?fr(v.rmse,2):'?'}</td><td>${fr(a.r2,3)}</td><td>${reveal?fr(v.r2,3):'?'}</td></tr>`;}).join('')}</tbody></table></div><p class="cm02-hint">MAE et RMSE : milliers de MRU. Validation : mêmes six annonces.</p>`;
 
   const chapters = [
-    {title: 'Quiz · manche 1', minutes: 3, steps: [
-      {title: 'Énigmes du CM 1', free: true, prompt: 'Rejoignez la salle avec le code au tableau. Les réponses restent secrètes jusqu’à la révélation.',
-        render(ctx) { window.MLFQuiz.mount(ctx, 1); }}
-    ]},
     {title: 'Plusieurs variables', minutes: 9, question: 'Comment prédire avec deux variables à la fois, et comment lire chaque coefficient ?', goal: 'Avec ' + M('p') + ' variables : ' + M(String.raw`\hat y = b + w_1x_1 + \dots + w_px_p`) + ', soit ' + M('p + 1') + ' paramètres. Chaque ' + M('w_j') + ' se lit « à autres variables égales » ; une variable seule peut tromper.', stage, steps: [
       {title: 'La distance ne compte pas ?', noStage:true,
         intuition: 'Un nuage de points ne montre qu’une variable à la fois. Les autres caractéristiques des logements restent cachées dans les points.',
@@ -393,10 +389,6 @@ joblib.dump(model, "loyers.joblib")   # un seul objet à livrer</pre>`;
           ctx.predict([['r', 'Vérifier la hausse, puis réentraîner et revalider si nécessaire'], ['k', 'Rien : le R² d’apprentissage était 0,90'], ['c', 'Réentraîner tout de suite sur les annonces du dernier mois']], {truth: 'r',
             feedback: () => 'La hausse est un <mark>signal d’alerte</mark>, pas une preuve suffisante de dérive. On vérifie d’abord données, volumes et saisie, puis le marché. Si le changement se confirme, on réentraîne sur des données récentes et on revalide avant de remplacer le modèle.'});
         }}
-    ]},
-    {title: 'Quiz · manche 2', minutes: 4, steps: [
-      {title: 'Énigmes du CM 2', free: true, prompt: 'Retrouvez la même salle et vos points de la manche 1. À la fin : le classement de la séance.',
-        render(ctx) { window.MLFQuiz.mount(ctx, 2); }}
     ]},
     {title: 'Vers le TD 2', minutes: 2, question: 'Que ferez-vous au TD 2 ?', steps: [
       {title: 'Ce que vous avez fait', free: true, recapOpen: true, prompt: 'En une séance :',
