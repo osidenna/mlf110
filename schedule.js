@@ -14,7 +14,7 @@
   const SCHEDULE = {
     start: '2026-10-20',
     skip: [],
-    dates: {},
+    dates: {cm02: '2026-10-26', cm03: 'TBD', cm04: 'TBD', cm05: 'TBD', cm06: 'TBD', cm07: 'TBD', cm08: 'TBD'},
     released: 2
   };
 
@@ -39,7 +39,7 @@
   }
   const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
-  const label = isoDate => { if (!isoDate) return 'date à fixer'; const d = new Date(isoDate + 'T00:00:00Z'); return `${JOURS[d.getUTCDay()]} ${d.getUTCDate() === 1 ? "1er" : d.getUTCDate()} ${MOIS[d.getUTCMonth()]}`; };
+  const label = isoDate => { if (!isoDate) return 'à venir'; const d = new Date(isoDate + 'T00:00:00Z'); return `${JOURS[d.getUTCDay()]} ${d.getUTCDate() === 1 ? "1er" : d.getUTCDate()} ${MOIS[d.getUTCMonth()]}`; };
 
   const api = {SCHEDULE, cmDates, isReleased, label};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.MLF110Schedule = api;
