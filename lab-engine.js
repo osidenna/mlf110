@@ -56,7 +56,7 @@
       ctx.visual.innerHTML = `<p class="lab-goal-line"><b>À retenir</b> ${ch.goal}</p>`;
     }
     const eyebrow = s => s.kind === 'cover' ? [course.code, course.date, course.duration || '90 min'].filter(Boolean).join(' · ')
-      : `Partie ${s.ci + 1} / ${nParts} · ${s.chapter.title}` + (s.kind === 'part' ? '' : s.kind === 'retain' ? ' · à retenir' : ` · étape ${s.k + 1} / ${s.chapter.steps.length}`);
+      : s.chapter.title + (s.kind === 'part' ? '' : s.kind === 'retain' ? ' · à retenir' : ` · ${s.k + 1} / ${s.chapter.steps.length}`);
     const solved = new Set();
     let index = Math.max(0, Math.min(steps.length - 1, parseInt((location.hash.match(/s(\d+)/) || [])[1] || '1', 10) - 1));
     let teardown = [], current = null;
