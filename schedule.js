@@ -8,14 +8,16 @@
    released : séances visibles par les étudiants.
               'auto' = toutes celles dont la date est passée ou aujourd'hui ;
               un nombre n = les n premières séances (dates ignorées pour la diffusion).
-   Les TD suivent leur CM : un TD est diffusé avec le dernier CM dont il dépend. */
+   Les TD suivent leur CM : un TD est diffusé avec le dernier CM dont il dépend.
+   holdTd   : TD retenus même si leur CM est diffusé, ex. ['td03'] ; les retirer de la liste pour les diffuser. */
 (function (root) {
   'use strict';
   const SCHEDULE = {
     start: '2026-10-20',
     skip: [],
     dates: {cm02: '2026-10-26', cm03: 'TBD', cm04: 'TBD', cm05: 'TBD', cm06: 'TBD', cm07: 'TBD', cm08: 'TBD'},
-    released: 2
+    released: 3,
+    holdTd: ['td03', 'td04']
   };
 
   const pad = n => String(n).padStart(2, '0');
@@ -41,6 +43,7 @@
   const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
   const label = isoDate => { if (!isoDate) return 'à venir'; const d = new Date(isoDate + 'T00:00:00Z'); return `${JOURS[d.getUTCDay()]} ${d.getUTCDate() === 1 ? "1er" : d.getUTCDate()} ${MOIS[d.getUTCMonth()]}`; };
 
-  const api = {SCHEDULE, cmDates, isReleased, label};
+  const tdHeld = (id, s = SCHEDULE) => (s.holdTd || []).includes(id);
+  const api = {SCHEDULE, cmDates, isReleased, tdHeld, label};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.MLF110Schedule = api;
 })(typeof window !== 'undefined' ? window : globalThis);
