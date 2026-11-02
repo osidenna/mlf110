@@ -9,13 +9,13 @@
   const reduced = () => root.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const escape = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 
-  function mount(THEMES, slot) {
+  function mount(THEMES, slot, groups) {
     const used = new Set();
     let timer = null, left = 180;
     slot.innerHTML = '<div class="oral">' +
       '<div class="oral-roll"><button type="button" class="oral-die" aria-label="Lancer le dé">' + dieSVG(6) + '</button>' +
       '<div><button type="button" class="as-button as-primary oral-go">Lancer le dé</button>' +
-      '<ol class="oral-themes">' + THEMES.map(t => '<li><span class="oral-face">' + t.face + '</span>' + escape(t.name) + '</li>').join('') + '</ol></div></div>' +
+      '<ol class="oral-themes">' + THEMES.map(t => '<li><span class="oral-face">' + t.face + '</span>' + escape(t.name) + '</li>').join('') + '</ol>' + (groups ? '<p class="oral-left"></p>' : '') + '</div></div>' +
       '<div class="oral-card" aria-live="polite" hidden></div></div>';
     const die = slot.querySelector('.oral-die'), card = slot.querySelector('.oral-card');
 
@@ -29,13 +29,14 @@
     }
     function clock() { return Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0'); }
     function stop() { clearInterval(timer); timer = null; }
-    function show(theme, q) {
+    function show(theme, q, who) {
       stop(); left = 180;
+      card.classList.remove('is-over');
       card.hidden = false;
-      card.innerHTML = '<div class="oral-card-head"><span class="oral-face">' + theme.face + '</span><span class="oral-theme">' + escape(theme.name) + '</span>' +
+      card.innerHTML = '<div class="oral-card-head"><span class="oral-face">' + theme.face + '</span><span class="oral-theme">' + escape(theme.name) + '</span>' + (who ? '<span class="oral-who">' + escape(who) + '</span>' : '') +
         '<span class="oral-timer"><strong>' + clock() + '</strong><button type="button" class="as-button oral-start">Démarrer</button></span></div>' +
         '<p class="oral-q">' + escape(q.q) + '</p><p class="oral-relance"><span>Relance</span>' + escape(q.relance) + '</p>' +
-        '<div class="oral-attendus"><strong>Attendus</strong><p>' + escape(q.attendus) + '</p></div>';
+        (q.attendus ? '<div class="oral-attendus"><strong>Attendus</strong><p>' + escape(q.attendus) + '</p></div>' : '');
       const start = card.querySelector('.oral-start'), time = card.querySelector('.oral-timer strong');
       start.addEventListener('click', () => {
         if (timer) { stop(); start.textContent = 'Reprendre'; return; }
@@ -46,18 +47,32 @@
         }, 1000);
       });
     }
+    // Avec des groupes : le dé tire un groupe pas encore passé, et son thème donne la face et la question.
+    const left_ = groups && groups.slice();
+    const go = slot.querySelector('.oral-go'), leftLabel = slot.querySelector('.oral-left');
+    function updateLeft() {
+      leftLabel.textContent = left_.length ? left_.length + (left_.length > 1 ? ' groupes restants' : ' groupe restant') : 'Tous les groupes sont passés';
+      if (!left_.length) { go.disabled = true; die.disabled = true; }
+    }
+    if (groups) updateLeft();
     function roll() {
-      const face = 1 + Math.floor(Math.random() * 6), theme = THEMES[face - 1], q = pick(theme);
-      if (reduced()) { die.innerHTML = dieSVG(face); show(theme, q); return; }
+      if (die.classList.contains('is-rolling') || (groups && !left_.length)) return;
+      let face = 1 + Math.floor(Math.random() * 6), who = '';
+      if (groups) {
+        const g = left_.splice(Math.floor(Math.random() * left_.length), 1)[0];
+        face = g.theme; who = g.ids.join(' + '); updateLeft();
+      }
+      const theme = THEMES[face - 1], q = groups ? theme.questions[0] : pick(theme);
+      if (reduced()) { die.innerHTML = dieSVG(face); show(theme, q, who); return; }
       die.classList.add('is-rolling');
       let ticks = 0;
       const flicker = setInterval(() => {
         die.innerHTML = dieSVG(1 + Math.floor(Math.random() * 6));
-        if (++ticks >= 8) { clearInterval(flicker); die.innerHTML = dieSVG(face); die.classList.remove('is-rolling'); show(theme, q); }
+        if (++ticks >= 8) { clearInterval(flicker); die.innerHTML = dieSVG(face); die.classList.remove('is-rolling'); show(theme, q, who); }
       }, 75);
     }
     die.addEventListener('click', roll);
-    slot.querySelector('.oral-go').addEventListener('click', roll);
+    go.addEventListener('click', roll);
   }
   // Une banque = un élément {widget: nom} dans td.js. D'autres fichiers peuvent en ajouter.
   root.MLF110Oral = {mount};
@@ -87,6 +102,8 @@
 .oral-relance span { display: inline-block; margin-right: 8px; padding: 1px 9px; border-radius: 999px; background: #fdf3dc; color: #8a6417; font-size: 12px; font-weight: 700; }
 .oral-attendus summary { cursor: pointer; font-size: 13.5px; font-weight: 700; color: var(--orange, #2e6b4f); }
 .oral-attendus p { margin: 6px 0 0; font-size: 14.5px; }
+.oral-left { margin: 10px 0 0; font-size: 14px; color: var(--muted, #6e7380); }
+.oral-who { font-weight: 700; font-variant-numeric: tabular-nums; }
 @media (max-width: 560px) { .oral-themes { grid-template-columns: 1fr; } .oral-q { font-size: 18px; } }
 @media print { .oral-roll, .oral-card { display: none; } }`;
   document.head.appendChild(style);

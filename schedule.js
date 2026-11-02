@@ -16,8 +16,8 @@
     start: '2026-10-20',
     skip: [],
     dates: {cm02: '2026-10-26', cm03: 'TBD', cm04: 'TBD', cm05: 'TBD', cm06: 'TBD', cm07: 'TBD', cm08: 'TBD'},
-    released: 2,
-    holdTd: ['td03', 'td04']
+    released: 3,
+    holdTd: ['td03']
   };
 
   const pad = n => String(n).padStart(2, '0');

@@ -109,20 +109,21 @@
         ? `<header class="td-ex-head"><span class="eyebrow">Exercice ${i + 1} · ${mn} min</span><h2>${H.esc(p.title)}</h2></header>${tools}${content}`
         : `<details class="td-extra td-extra-exercise"><summary>Exercice ${i + 1} · ${H.esc(p.title)} <span>Pour aller plus loin</span></summary>${tools}${content}</details>`) + '</article>';
     };
+    const allTd = window.MLF110_TD || [], nextTd = allTd[allTd.indexOf(td) + 1];
     const workMinutes = parts.reduce((sum, {p, d}) => sum + minutes(p, d), 0);
     main.innerHTML = `<div class="content td-content"><nav class="breadcrumb"><a href="#td">Les TD</a> / <span>TD ${td.number}</span></nav>` +
       `<header class="lesson-header"><div class="eyebrow">TD ${n2(td.number)} · 1 h 30</div><h1>${H.esc(td.title)}</h1>` +
       `<div class="lesson-actions">${H.button(H.icon('download') + 'Imprimer', 'print-td', td.id)}${H.pdfLink(td.id)}</div></header>` +
-      `<details class="td-outline"><summary>Plan du TD</summary><p>${H.esc(td.objective)}</p><nav class="td-index" aria-label="Exercices du TD">${index}</nav><p>${workMinutes} min d’exercices${ORAL ? ' · 15 min d’oral' : ''}.</p><p>${td.after.map(n => `<a href="#cm${n2(n)}">Revoir le CM ${n}</a>`).join(' · ')}</p></details>` +
+      `<details class="td-outline"><summary>Plan du TD</summary><p>${H.esc(td.objective)}</p><nav class="td-index" aria-label="Exercices du TD">${index}</nav><p>${workMinutes ? `${workMinutes} min d’exercices${ORAL ? ' · 15 min d’oral' : ''}` : '15 min d’oral'}.</p><p>${td.after.map(n => `<a href="#cm${n2(n)}">Revoir le CM ${n}</a>`).join(' · ')}</p></details>` +
       parts.map(ex).join('') +
       (ORAL ? `<article class="td-ex" id="${td.id}-oral" data-status="${getStatus(td.id + '-oral')}"><details class="td-oral-panel"><summary><span>Mini-oral</span><span>15 min</span></summary><div class="td-ex-body"><div class="td-ex-tools"><span>3 min par binôme · sans notes, sans IA.</span>${status(td.id + '-oral', 'mini-oral')}</div><div class="td-widget" data-oral></div></div></details></article>` : '') +
-      H.sources(td) + `<nav class="lesson-pagination"><a href="#td">${H.icon('prev')}Tous les TD</a>${td.number < (window.MLF110_TD || []).length ? `<a href="#td/td${n2(td.number + 1)}">TD suivant ${H.icon('next')}</a>` : ''}</nav>` + H.footer() + '</div>';
+      H.sources(td) + `<nav class="lesson-pagination"><a href="#td">${H.icon('prev')}Tous les TD</a>${nextTd ? `<a href="#td/${nextTd.id}">TD suivant ${H.icon('next')}</a>` : ''}</nav>` + H.footer() + '</div>';
 
     // Tout est ouvert, dans l'ordre : les titres des blocs restent des repères, pas des boutons.
     const content = main.querySelector('.td-content'); content?.classList.add('open-flow');
     // Indice, tuteur IA et solution restent des révélations à la demande (fermées, cliquables).
     main.querySelectorAll('details:not(.td-reveal)').forEach(d => { d.open = true; d.addEventListener('toggle', () => { if (!d.open) d.open = true; }); });
-    if (ORAL && window.MLF110Oral) window.MLF110Oral.mount(ORAL.map((t, i) => ({face: i + 1, name: t.theme, questions: [{q: t.q, relance: t.relance, attendus: t.attendus}]})), main.querySelector('[data-oral]'));
+    if (ORAL && window.MLF110Oral) window.MLF110Oral.mount(ORAL.map((t, i) => ({face: i + 1, name: t.theme, questions: [{q: t.q, relance: t.relance, attendus: td.id === 'td03' ? '' : t.attendus}]})), main.querySelector('[data-oral]'), window.MLF110_ORAL_GROUPS?.[td.id]);
     main.querySelectorAll('[data-jump]').forEach(a => a.addEventListener('click', ev => {
       ev.preventDefault();
       const target = document.getElementById(a.dataset.jump);
