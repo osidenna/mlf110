@@ -15,8 +15,8 @@
   const SCHEDULE = {
     start: '2026-10-20',
     skip: [],
-    dates: {cm02: '2026-10-26', cm03: '2026-11-02', cm04: 'TBD', cm05: 'TBD', cm06: 'TBD', cm07: 'TBD', cm08: 'TBD'},
-    released: 3,
+    dates: {cm02: '2026-10-26', cm03: '2026-11-02', cm04: '2026-11-09', cm05: 'TBD', cm06: 'TBD', cm07: 'TBD', cm08: 'TBD'},
+    released: 4,
     holdTd: ['td03']
   };
 

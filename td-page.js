@@ -121,6 +121,7 @@
 
     // Tout est ouvert, dans l'ordre : les titres des blocs restent des repères, pas des boutons.
     const content = main.querySelector('.td-content'); content?.classList.add('open-flow');
+    window.MLF110Cells?.mount(main);
     // Indice, tuteur IA et solution restent des révélations à la demande (fermées, cliquables).
     main.querySelectorAll('details:not(.td-reveal)').forEach(d => { d.open = true; d.addEventListener('toggle', () => { if (!d.open) d.open = true; }); });
     if (ORAL && window.MLF110Oral) window.MLF110Oral.mount(ORAL.map((t, i) => ({face: i + 1, name: t.theme, questions: [{q: t.q, relance: t.relance, attendus: td.id === 'td03' ? '' : t.attendus}]})), main.querySelector('[data-oral]'), window.MLF110_ORAL_GROUPS?.[td.id]);

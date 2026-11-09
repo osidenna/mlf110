@@ -42,8 +42,8 @@
     });
     function coverRender(ctx) {
       ctx.visual.classList.add('lab-cover');
-      ctx.visual.innerHTML = (course.lead ? `<p class="lab-lead">${course.lead}</p>` : '') + (course.coverBefore || '') +
-        `<ol class="lab-parts">${course.chapters.map((ch, ci) => `<li><button type="button" data-ci="${ci}"><span class="n">${pad2(ci + 1)}</span><span class="t"><strong>${ch.title}</strong>${ch.question || ch.goal ? `<small>${ch.question || ch.goal}</small>` : ''}</span><span class="m">${ch.minutes ? ch.minutes + ' min' : ''}</span></button></li>`).join('')}</ol>` + (course.coverAfter || '');
+      ctx.visual.innerHTML = (course.lead ? `<p class="lab-lead">${course.lead}</p>` : '') + (course.coverBefore || '') + (course.coverPlan === false ? '' :
+        `<ol class="lab-parts">${course.chapters.map((ch, ci) => `<li><button type="button" data-ci="${ci}"><span class="n">${pad2(ci + 1)}</span><span class="t"><strong>${ch.title}</strong>${ch.question || ch.goal ? `<small>${ch.question || ch.goal}</small>` : ''}</span><span class="m">${ch.minutes ? ch.minutes + ' min' : ''}</span></button></li>`).join('')}</ol>`) + (course.coverAfter || '');
       ctx.visual.querySelectorAll('[data-ci]').forEach(b => b.addEventListener('click', () => go(partFirst[+b.dataset.ci])));
     }
     function partRender(ctx, ch, ci) {

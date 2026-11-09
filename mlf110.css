@@ -205,7 +205,6 @@ body,.ml-presentation,.presentation-canvas,.presentation-chrome{background:var(-
 .td-content.open-flow details:not(.td-reveal) > summary{pointer-events:none;cursor:default;list-style:none}
 .td-content.open-flow details:not(.td-reveal) > summary::-webkit-details-marker{display:none}
 .td-content.open-flow details:not(.td-reveal) > summary::after,.td-content.open-flow details:not(.td-reveal) > summary::before{display:none!important}
-.td-content.open-flow .td-reveal > summary{font-weight:700;color:#7b1e2e;cursor:pointer}
 .oral-attendus{margin-top:10px}.oral-attendus strong{display:block;font-size:13px;color:#7b1e2e}
 .td-figure{margin:14px 0 6px}.td-figure svg{width:100%;max-width:640px;height:auto;display:block}.td-figure figcaption{font-size:13px;color:var(--muted);margin-top:4px}
 /* Accueil sobre, comme SID34 : dates en gris, pas de pastilles, une seule ligne d'information. */
@@ -214,3 +213,37 @@ body,.ml-presentation,.presentation-canvas,.presentation-chrome{background:var(-
 .header-year{font:400 11px/1 var(--sans);color:var(--muted);letter-spacing:.04em;align-self:center}
 .minimal-home .course-row.is-soon h3{color:#6b6f7a;font-weight:400}
 .td-outline .td-index .td-number{grid-column:auto}
+
+/* TD : Indice, Tuteur IA et Solution, des pastilles discrètes ; le contenu s'ouvre dessous. */
+.td-content .td-reveals{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;margin:18px 0 0;padding:0;border:0}
+.td-content .td-reveal,.td-content .td-reveal[open]{border:0;background:none;padding:0;border-radius:0;flex:0 1 auto}
+.td-content.open-flow .td-reveal>summary{display:inline-flex;align-items:center;gap:6px;min-height:36px;margin:0;padding:0 14px;box-sizing:border-box;border:1px solid var(--line-strong);border-radius:999px;background:#fff;color:#4b4f5a;font:400 13px/1 var(--sans);cursor:pointer;list-style:none;transition:background .15s ease,border-color .15s ease}
+.td-content .td-reveal>summary::-webkit-details-marker{display:none}
+.td-content .td-reveal>summary::before{content:none}
+.td-content .td-reveal>summary svg{width:14px;height:14px;color:var(--muted)}
+.td-content.open-flow .td-reveal>summary:hover{background:var(--paper-2);border-color:#7b1e2e}
+.td-content.open-flow .td-reveal[open]>summary{background:var(--paper-2);border-color:#7b1e2e;color:#7b1e2e}
+.td-content .td-reveal[open]>summary svg{color:#7b1e2e}
+.td-content .td-reveal[open]{flex-basis:100%;width:100%}
+.td-content .td-reveal>div{margin-top:10px;padding:14px 18px;background:var(--paper-2);border-radius:10px;font-size:15px;line-height:1.7}
+
+/* TD : cellules Python exécutées dans le navigateur. */
+.py{margin:12px 0 18px;border:1px solid var(--line-strong);border-radius:10px;overflow:hidden;background:#fff}
+.py-code{display:block;width:100%;box-sizing:border-box;min-height:48px;padding:13px 16px;border:0;border-left:4px solid #7b1e2e;border-radius:0;background:#fff;color:var(--ink);font:13.5px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;tab-size:4;white-space:pre;overflow-x:auto;resize:vertical}
+.py-code:focus{outline:2px solid #7b1e2e;outline-offset:-2px}
+.py-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;background:var(--paper-2);border-top:1px solid var(--line)}
+.py-run,.py-reset{min-height:34px;padding:0 14px;border-radius:999px;font:400 13px/1 var(--sans);cursor:pointer}
+.py-run{border:1px solid #7b1e2e;background:#7b1e2e;color:#fff;font-weight:700}
+.py-run:hover{background:#5f1622}
+.py-run:disabled{opacity:.45;cursor:default}
+.py-reset{border:1px solid var(--line-strong);background:#fff;color:#4b4f5a}
+.py-reset:hover{background:var(--paper-2)}
+.py-status{font-size:13px;color:var(--muted)}
+.py-out{padding:12px 16px;border-top:1px solid var(--line);overflow-x:auto}
+.py-text{margin:0 0 6px;padding:0;background:none;border:0;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;color:var(--ink)}
+.py-text:last-child{margin-bottom:0}
+.py-text.is-error{color:#7b1e2e}
+.py-html table,.py-html table.dataframe{width:auto;margin:0;border:0;border-collapse:collapse;font-size:13.5px}
+.td-ex-body :not(pre)>code{font:.88em ui-monospace,SFMono-Regular,Menlo,monospace}
+.py-html th,.py-html td{padding:4px 12px;border:0;border-bottom:1px solid var(--line);text-align:left}
+@media print{.py-bar,.td-reveals{display:none!important}}
